@@ -42,8 +42,10 @@ export default class BaseCrawler {
    * @param {Object} options
    * @param {number} [options.timeout=30000] - 대기 타임아웃(ms)
    */
-  async navigate(url, waitSelector, { timeout = 30000 } = {}) {
-    await this.page.goto(url, { waitUntil: "networkidle0", timeout });
+  async navigate(url, waitSelector, { timeout = 60000 } = {}) {
+    // networkidle2: 동시 네트워크 요청 2개 이하 상태가 500ms 지속되면 완료로 판단
+    // SPA 특성상 백그라운드 요청이 계속 있어 networkidle0는 타임아웃 발생
+    await this.page.goto(url, { waitUntil: "networkidle2", timeout });
     if (waitSelector) {
       await this.page.waitForSelector(waitSelector, { timeout });
     }
