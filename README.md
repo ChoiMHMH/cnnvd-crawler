@@ -30,8 +30,8 @@ Claude AI로 번역하여 JSON으로 저장하는 크롤링 파이프라인입�
 | 도구 | 탈락 이유 |
 |------|-----------|
 | **Cheerio** | 정적 HTML 파싱 전용 — CNNVD는 Vue 기반 SPA라 JS 실행 불가 |
-| **Selenium** | Java 의존성, 설정 복잡도 높음, Node.js 생태계와 이질적 |
-| **Playwright** | 기능적으로 우수하나 이 프로젝트 규모에 과도하게 무거움 |
+| **Selenium** | Python 기반이라 Next.js 프로젝트와 언어가 분리되어 유지보수 부담 |
+| **Playwright** | 멀티브라우저 지원 등 기능은 우수하나, 처음 크롤러를 만드는 시점에서 Puppeteer가 레퍼런스와 커뮤니티가 더 풍부해 학습 비용 기준으로 Puppeteer 선택 |
 | **Puppeteer** | Chrome DevTools Protocol 직접 사용, Node.js 네이티브, 경량 |
 
 ---
