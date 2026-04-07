@@ -2,5 +2,4 @@ node_modules/
 .env
 output/*.json
 !output/result.json
-plan.md
 JOB_TARGET.md
