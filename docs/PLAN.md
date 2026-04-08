@@ -38,14 +38,17 @@ Playwright로 전환하면 `@playwright/test` 러너를 E2E 테스트에 바로 
 
 ### 작업 목록
 
-- [ ] `BaseCrawler.mjs`의 `launch()` / `close()` Playwright로 교체
+- [x] `BaseCrawler.mjs`의 `launch()` / `close()` Playwright로 교체
   - `chromium.launch()` → `browser.newContext()` → `context.newPage()` 흐름 적용
-- [ ] `navigate()` 메서드: Playwright 방식으로 조정
+  - `withTimeout` 타이머 누수 수정 (`finally { clearTimeout(timer) }`)
+- [x] `navigate()` 메서드: Playwright 방식으로 조정
   - `waitUntil: "networkidle"` (Playwright에서는 `"networkidle"`로 통합됨)
-- [ ] `CnnvdCrawler.mjs`: `$$eval` → `evaluate()` 또는 `locator().evaluateAll()` 교체
-- [ ] `package.json`: `puppeteer` 제거 → `playwright` 추가
+- [x] `CnnvdCrawler.mjs`: `$$eval` → `evaluate()` 교체
+  - Playwright `evaluate`는 인자 1개만 허용 → 객체로 래핑하여 전달
+  - `SELECTORS` 전체 전달 시 함수(`PAGINATION_ITEM_N`)가 직렬화 불가 → 필요한 문자열 셀렉터만 추출하여 전달
+- [x] `package.json`: `puppeteer` 제거 → `playwright` 추가
 - [ ] 실행 시간 before/after 측정 (Puppeteer vs Playwright, 20건 기준)
-- [ ] GitHub Actions: `npx puppeteer browsers install chrome` → `npx playwright install chromium` 변경
+- [x] GitHub Actions: `npx puppeteer browsers install chrome` → `npx playwright install chromium --with-deps` 변경
 
 ### API 변환 매핑
 
@@ -390,9 +393,9 @@ Phase 1에서 Playwright 전환을 완료한 뒤 테스트를 작성하는 이�
 ## 작업 순서 요약
 
 ```
-Phase 1 (현재) → Phase 1.5        → Phase 2              → Phase 3      → Phase 4
+Phase 1 (완료) → Phase 1.5 (현재)  → Phase 2              → Phase 3      → Phase 4
 Playwright      extractDetail      테스트 작성 + 버그 수정   2번째 크롤러     TypeScript
-전환            구조 변경          (TDD, vitest + PW)      (1688.com)      전환
+전환 ✅         구조 변경          (TDD, vitest + PW)      (1688.com)      전환
 ```
 
 **순서 결정 이유:**
@@ -412,11 +415,11 @@ Playwright      extractDetail      테스트 작성 + 버그 수정   2번째 �
 
 | 항목 | 초기 (crawling.mjs) | 현재 | Phase 1 후 | Phase 1.5 후 | Phase 2 후 | Phase 3 후 | Phase 4 후 |
 |------|--------------------|----|------------|-------------|------------|------------|------------|
-| 파일 수 | 1 | 7 | 측정 예정 | 측정 예정 | +3 (테스트) | +3 (크롤러) | 동일 |
-| 총 줄 수 | 130 | 422 | 측정 예정 | 측정 예정 | 측정 예정 | 측정 예정 | 측정 예정 |
+| 파일 수 | 1 | 7 | 7 (동일) | 측정 예정 | +3 (테스트) | +3 (크롤러) | 동일 |
+| 총 줄 수 | 130 | 422 | 434 | 측정 예정 | 측정 예정 | 측정 예정 | 측정 예정 |
 | 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | 0 | 0 | 0 |
 | delay() 사용 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 타이머 누수 | 있음 | 있음 | 있음 | 있음 | 수정 (TDD) | 수정 | 수정 |
+| 타이머 누수 | 있음 | 있음 | **수정 완료** | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 |
 | 중복 키 안정성 | — | 불안정 (번역본) | 불안정 | 불안정 | 안정 (TDD) | 안정 | 안정 |
 | contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | `{type,text}[]` | 동일 | 동일 | 동일 |
 | 테스트 케이스 수 | 0 | 0 | 0 | 0 | 19+ (버그 수정 테스트 포함) | 측정 예정 | 측정 예정 |

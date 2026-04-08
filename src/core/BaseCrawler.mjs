@@ -1,4 +1,4 @@
-import puppeteer from "puppeteer";
+import { chromium } from "playwright";
 
 /**
  * 모든 크롤러의 기반이 되는 추상 클래스입니다.
@@ -8,6 +8,7 @@ import puppeteer from "puppeteer";
 export default class BaseCrawler {
   constructor() {
     this.browser = null;
+    this.context = null;
     this.page = null;
   }
 
@@ -15,12 +16,12 @@ export default class BaseCrawler {
    * 브라우저를 실행하고 새 페이지를 엽니다.
    */
   async launch() {
-    this.browser = await puppeteer.launch({
+    this.browser = await chromium.launch({
       headless: true,
-      defaultViewport: null,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-    this.page = await this.browser.newPage();
+    this.context = await this.browser.newContext();
+    this.page = await this.context.newPage();
   }
 
   /**
@@ -30,22 +31,20 @@ export default class BaseCrawler {
     if (this.browser) {
       await this.browser.close();
       this.browser = null;
+      this.context = null;
       this.page = null;
     }
   }
 
   /**
    * 지정한 URL로 이동하고 특정 셀렉터가 나타날 때까지 대기합니다.
-   * delay() 대신 waitForSelector를 사용하여 안정적으로 로딩을 감지합니다.
    * @param {string} url - 이동할 URL
    * @param {string} waitSelector - 로딩 완료 기준 셀렉터
    * @param {Object} options
-   * @param {number} [options.timeout=30000] - 대기 타임아웃(ms)
+   * @param {number} [options.timeout=60000] - 대기 타임아웃(ms)
    */
   async navigate(url, waitSelector, { timeout = 60000 } = {}) {
-    // networkidle2: 동시 네트워크 요청 2개 이하 상태가 500ms 지속되면 완료로 판단
-    // SPA 특성상 백그라운드 요청이 계속 있어 networkidle0는 타임아웃 발생
-    await this.page.goto(url, { waitUntil: "networkidle2", timeout });
+    await this.page.goto(url, { waitUntil: "networkidle", timeout });
     if (waitSelector) {
       await this.page.waitForSelector(waitSelector, { timeout });
     }
@@ -80,14 +79,19 @@ export default class BaseCrawler {
    * @returns {Promise<*>} 함수 반환값
    */
   async withTimeout(fn, ms = 10000) {
-    return Promise.race([
-      fn(),
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`[withTimeout] ${ms}ms 초과`)),
-          ms,
-        ),
-      ),
-    ]);
+    let timer;
+    try {
+      return await Promise.race([
+        fn(),
+        new Promise((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error(`[withTimeout] ${ms}ms 초과`)),
+            ms,
+          );
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }

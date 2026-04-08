@@ -51,15 +51,17 @@ export default class CnnvdCrawler extends BaseCrawler {
    * @returns {Promise<Array<{title: string, date: string}>>}
    */
   async extractList() {
-    return await this.page.$$eval(
-      SELECTORS.CONTENT_CENTER,
-      (elements, titleSel, dateSel) =>
-        elements.map((e) => ({
+    return await this.page.evaluate(
+      ({ centerSel, titleSel, dateSel }) =>
+        Array.from(document.querySelectorAll(centerSel)).map((e) => ({
           title: e.querySelector(titleSel)?.textContent?.trim() ?? "",
           date: e.querySelector(dateSel)?.textContent?.trim() ?? "",
         })),
-      SELECTORS.CONTENT_TITLE,
-      SELECTORS.CONTENT_DETAIL,
+      {
+        centerSel: SELECTORS.CONTENT_CENTER,
+        titleSel: SELECTORS.CONTENT_TITLE,
+        dateSel: SELECTORS.CONTENT_DETAIL,
+      },
     );
   }
 
@@ -73,14 +75,20 @@ export default class CnnvdCrawler extends BaseCrawler {
   async extractDetail() {
     await this.page.waitForSelector(SELECTORS.DETAIL_INFO);
 
+    const detailSelectors = {
+      DETAIL_TITLE: SELECTORS.DETAIL_TITLE,
+      DETAIL_SUBTITLE: SELECTORS.DETAIL_SUBTITLE,
+      DETAIL_CONTENT: SELECTORS.DETAIL_CONTENT,
+    };
+
     return await this.page.evaluate((selectors) => {
       const detailTitle =
         document.querySelector(selectors.DETAIL_TITLE)?.textContent?.trim() ?? "";
       const detailSubtitle =
         document.querySelector(selectors.DETAIL_SUBTITLE)?.textContent?.trim() ?? "";
 
-      const sections = [];
-      let currentSection = [];
+      const contents = [];
+      let currentParagraphs = [];
       const detailContent = document.querySelector(selectors.DETAIL_CONTENT);
 
       if (detailContent) {
@@ -88,7 +96,6 @@ export default class CnnvdCrawler extends BaseCrawler {
           const tagName = tag.tagName.toLowerCase();
           const tagText = tag.textContent.trim();
 
-          // table 또는 &nbsp; 빈 단락 → break
           if (
             tagName === "table" ||
             (tagName === "p" && tag.innerHTML.trim() === "&nbsp;")
@@ -97,25 +104,20 @@ export default class CnnvdCrawler extends BaseCrawler {
           }
 
           if (tagName === "p" && tag.querySelector("strong") !== null) {
-            // 누적된 일반 문단 저장 후 소제목 추가
-            if (currentSection.length > 0) {
-              sections.push(`<div>${currentSection.join(" ")}</div>`);
-              currentSection = [];
+            if (currentParagraphs.length > 0) {
+              contents.push({ type: "paragraph", text: currentParagraphs.join(" ") });
+              currentParagraphs = [];
             }
-            sections.push(
-              `<div class="font-extrabold mt-3 mb-1">${tagText}</div>`,
-            );
+            contents.push({ type: "heading", text: tagText });
           } else {
-            currentSection.push(tagText);
+            currentParagraphs.push(tagText);
           }
         }
 
-        if (currentSection.length > 0) {
-          sections.push(`<div>${currentSection.join(" ")}</div>`);
+        if (currentParagraphs.length > 0) {
+          contents.push({ type: "paragraph", text: currentParagraphs.join(" ") });
         }
       }
-
-      const contents = sections.join("");
 
       // table 추출 (최대 11행)
       const rows = Array.from(document.querySelectorAll("table tbody tr"));
@@ -129,7 +131,7 @@ export default class CnnvdCrawler extends BaseCrawler {
         .join(" + ");
 
       return { detailTitle, detailSubtitle, contents, table };
-    }, SELECTORS);
+    }, detailSelectors);
   }
 
   /**
@@ -138,16 +140,16 @@ export default class CnnvdCrawler extends BaseCrawler {
    * @returns {Promise<Object|null>} 상세 데이터 또는 null
    */
   async navigateToDetail(index) {
-    const elements = await this.page.$$(SELECTORS.LIST_ITEMS);
-    if (!elements[index]) {
+    const count = await this.page.locator(SELECTORS.LIST_ITEMS).count();
+    if (index >= count) {
       console.warn(`[navigateToDetail] 인덱스 ${index} 항목이 없습니다.`);
       return null;
     }
 
-    await this.page.evaluate((selector, i) => {
+    await this.page.evaluate(({ selector, i }) => {
       const el = document.querySelectorAll(selector)[i];
       if (el) el.click();
-    }, SELECTORS.LIST_ITEMS, index);
+    }, { selector: SELECTORS.LIST_ITEMS, i: index });
 
     await this.page.waitForSelector(SELECTORS.DETAIL_INFO, { timeout: 30000 });
     const data = await this.extractDetail();

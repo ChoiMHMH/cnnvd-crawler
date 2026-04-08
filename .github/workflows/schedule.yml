@@ -24,8 +24,8 @@ jobs:
       - name: 의존성 설치
         run: npm ci
 
-      - name: Puppeteer 의존성 설치 (Linux)
-        run: npx puppeteer browsers install chrome
+      - name: Playwright 브라우저 설치
+        run: npx playwright install chromium --with-deps
 
       - name: 크롤링 실행
         env:
