@@ -31,6 +31,22 @@ async function translateText(text) {
 }
 
 /**
+ * contents 배열의 각 요소를 번역합니다.
+ * @param {Array<{type: string, text: string}>} sections - 구조화된 본문 배열
+ * @returns {Promise<Array<{type: string, text: string}>>} 번역된 배열
+ */
+async function translateContents(sections) {
+  if (!Array.isArray(sections) || sections.length === 0) return sections;
+
+  return Promise.all(
+    sections.map(async (section) => ({
+      type: section.type,
+      text: await translateText(section.text),
+    })),
+  );
+}
+
+/**
  * 수집된 데이터 배열 전체를 번역합니다.
  * 각 항목의 detailTitle, detailSubtitle, contents, table을 번역합니다.
  * @param {Array<Object>} items - 번역할 데이터 배열
@@ -43,7 +59,7 @@ export async function translate(items) {
     const [title, subtitle, contents, table] = await Promise.all([
       translateText(item.detailTitle),
       translateText(item.detailSubtitle),
-      translateText(item.contents),
+      translateContents(item.contents),
       translateText(item.table),
     ]);
 

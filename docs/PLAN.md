@@ -140,20 +140,22 @@ sections.push(`<div class="font-extrabold mt-3 mb-1">${tagText}</div>`);
 
 ### 작업 목록
 
-- [ ] `extractDetail` 반환 구조를 `{ type, text }[]` 형태로 변경 (`CnnvdCrawler.mjs`)
-- [ ] `translate.js` — contents가 배열로 바뀜에 따라 번역 로직 수정
-  - 현재: `translateText(item.contents)` — 문자열 하나를 통째로 전달
-  - 변경 후: 배열의 각 요소별로 `translateText(element.text)` 호출 필요
-  - 결정 필요: heading과 paragraph의 번역 전략을 다르게 할 것인지 (heading은 짧아서 한번에, paragraph는 길 수 있음)
-  - 결정 필요: `table` 필드도 구조화 대상인지 (현재 `" + "` 구분 문자열)
-- [ ] 수정 후 파이프라인 실행해서 정상 동작 확인
-- [ ] result.json 데이터 구조 변경 확인
+- [x] `extractDetail` 반환 구조를 `{ type, text }[]` 형태로 변경 (`CnnvdCrawler.mjs`)
+- [x] `translate.js` — contents가 배열로 바뀜에 따라 번역 로직 수정
+  - `translateContents()` 함수 추가: 배열의 각 요소를 `Promise.all`로 병렬 번역
+  - 결정: heading/paragraph 동일하게 번역 (짧은 텍스트는 API가 자연스럽게 처리)
+  - 결정: `table` 필드는 현재 단계에서 구조화하지 않음 (Phase 2에서 재검토)
+- [x] `validate.js` — contents 검증 로직을 배열 기반으로 수정
+- [x] 수정 후 파이프라인 실행해서 정상 동작 확인 (20건 수집, 9건 검증 통과)
+- [x] result.json 데이터 구조 변경 확인
 
-### 예상 before/after
+### 실측 before/after
 
 | 항목 | Before | After |
 |------|--------|-------|
-| extractDetail 반환값 | HTML 문자열 (스타일 포함) | 구조화 데이터 `{ type, text }[]` |
+| extractDetail 반환값 | HTML 문자열 (Tailwind 클래스 포함) | 구조화 데이터 `{ type, text }[]` |
+| translate.js contents 처리 | `translateText(string)` 1회 호출 | `translateContents([])` — 요소별 병렬 번역 |
+| validate.js contents 검증 | `!item.contents?.trim()` | `!Array.isArray(item.contents) \|\| item.contents.length === 0` |
 
 ---
 
@@ -393,9 +395,9 @@ Phase 1에서 Playwright 전환을 완료한 뒤 테스트를 작성하는 이�
 ## 작업 순서 요약
 
 ```
-Phase 1 (완료) → Phase 1.5 (현재)  → Phase 2              → Phase 3      → Phase 4
+Phase 1 (완료) → Phase 1.5 (완료)  → Phase 2 (현재)       → Phase 3      → Phase 4
 Playwright      extractDetail      테스트 작성 + 버그 수정   2번째 크롤러     TypeScript
-전환 ✅         구조 변경          (TDD, vitest + PW)      (1688.com)      전환
+전환 ✅         구조 변경 ✅       (TDD, vitest + PW)      (1688.com)      전환
 ```
 
 **순서 결정 이유:**
@@ -415,13 +417,13 @@ Playwright      extractDetail      테스트 작성 + 버그 수정   2번째 �
 
 | 항목 | 초기 (crawling.mjs) | 현재 | Phase 1 후 | Phase 1.5 후 | Phase 2 후 | Phase 3 후 | Phase 4 후 |
 |------|--------------------|----|------------|-------------|------------|------------|------------|
-| 파일 수 | 1 | 7 | 7 (동일) | 측정 예정 | +3 (테스트) | +3 (크롤러) | 동일 |
-| 총 줄 수 | 130 | 422 | 434 | 측정 예정 | 측정 예정 | 측정 예정 | 측정 예정 |
+| 파일 수 | 1 | 7 | 7 (동일) | 7 (동일) | +3 (테스트) | +3 (크롤러) | 동일 |
+| 총 줄 수 | 130 | 422 | 434 | 444 | 측정 예정 | 측정 예정 | 측정 예정 |
 | 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | 0 | 0 | 0 |
 | delay() 사용 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 타이머 누수 | 있음 | 있음 | **수정 완료** | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 |
 | 중복 키 안정성 | — | 불안정 (번역본) | 불안정 | 불안정 | 안정 (TDD) | 안정 | 안정 |
-| contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | `{type,text}[]` | 동일 | 동일 | 동일 |
+| contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | **`{type,text}[]`** | 동일 | 동일 | 동일 |
 | 테스트 케이스 수 | 0 | 0 | 0 | 0 | 19+ (버그 수정 테스트 포함) | 측정 예정 | 측정 예정 |
 | 테스트 커버리지 | 0% | 0% | 0% | 0% | 측정 예정 | 측정 예정 | 측정 예정 |
 | 실행 시간 (20건) | 미측정 | 미측정 | 측정 예정 | 측정 예정 | 측정 예정 | — | 측정 예정 |

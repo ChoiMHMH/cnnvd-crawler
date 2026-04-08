@@ -16,7 +16,7 @@ export function validate(items) {
 
     if (!item.detailTitle?.trim()) failures.push("detailTitle");
     if (!item.detailSubtitle?.trim()) failures.push("detailSubtitle");
-    if (!item.contents?.trim()) failures.push("contents");
+    if (!Array.isArray(item.contents) || item.contents.length === 0) failures.push("contents");
 
     if (failures.length > 0) {
       console.warn(
