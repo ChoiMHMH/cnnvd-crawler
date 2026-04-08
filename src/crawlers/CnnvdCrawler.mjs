@@ -79,6 +79,7 @@ export default class CnnvdCrawler extends BaseCrawler {
       DETAIL_TITLE: SELECTORS.DETAIL_TITLE,
       DETAIL_SUBTITLE: SELECTORS.DETAIL_SUBTITLE,
       DETAIL_CONTENT: SELECTORS.DETAIL_CONTENT,
+      DETAIL_TABLE_ROWS: SELECTORS.DETAIL_TABLE_ROWS,
     };
 
     return await this.page.evaluate((selectors) => {
@@ -119,8 +120,8 @@ export default class CnnvdCrawler extends BaseCrawler {
         }
       }
 
-      // table 추출 (최대 11행)
-      const rows = Array.from(document.querySelectorAll("table tbody tr"));
+      // table 추출 (최대 11행, detail-content 범위 내)
+      const rows = Array.from(document.querySelectorAll(selectors.DETAIL_TABLE_ROWS));
       const table = rows
         .slice(0, 11)
         .map((row) =>
@@ -130,7 +131,7 @@ export default class CnnvdCrawler extends BaseCrawler {
         )
         .join(" + ");
 
-      return { detailTitle, detailSubtitle, contents, table };
+      return { detailTitle, detailSubtitle, originalSubtitle: detailSubtitle, contents, table };
     }, detailSelectors);
   }
 

@@ -27,6 +27,9 @@ jobs:
       - name: Playwright 브라우저 설치
         run: npx playwright install chromium --with-deps
 
+      - name: 단위 테스트 실행
+        run: npm test
+
       - name: 크롤링 실행
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

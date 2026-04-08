@@ -261,47 +261,36 @@ Phase 1에서 Playwright 전환을 완료한 뒤 테스트를 작성하는 이�
 ### 작업 목록
 
 **환경 세팅**
-- [ ] vitest 설치 및 설정
-- [ ] 테스트 픽스처 준비 (`tests/fixtures/`)
-  - 정상 데이터, 빈 데이터, 중복 데이터 JSON
+- [x] vitest 설치 및 설정
+- [x] 테스트 픽스처 — 별도 fixture 파일 대신 테스트 내 `makeItem()` 헬퍼 함수로 처리 (파일 I/O 없이 더 간결)
 
 **TDD로 버그 수정 (Red → Green → Refactor)**
-- [ ] `withTimeout` 타이머 누수 — 실패 테스트 작성 → `clearTimeout` 수정 (`BaseCrawler.mjs`)
-  - 수정 방향:
-    ```js
-    async withTimeout(fn, ms = 10000) {
-      let timer;
-      try {
-        return await Promise.race([
-          fn(),
-          new Promise((_, reject) => {
-            timer = setTimeout(() => reject(new Error(`[withTimeout] ${ms}ms 초과`)), ms);
-          }),
-        ]);
-      } finally {
-        clearTimeout(timer);
-      }
-    }
-    ```
-- [ ] 중복 키 문제 — 번역 결과 다를 때 중복 감지 실패 테스트 작성 → `originalSubtitle` 도입 (`CnnvdCrawler.mjs` + `saveToJson.js` + `translate.js` — 번역 시 원문 subtitle 보존 필요)
-- [ ] `table tbody tr` 셀렉터를 `selectors.js`로 분리 (리팩토링, 동작 변경 없음)
+- [x] `withTimeout` 타이머 누수 — Phase 1에서 코드 수정 완료, 이번 Phase에서 테스트 4개 작성 (성공·실패 시 clearTimeout 호출 검증)
+- [x] 중복 키 문제 — TDD Red: 번역 결과 다를 때 중복 감지 실패 테스트 작성 → Green: `originalSubtitle` 필드 도입 (`CnnvdCrawler.mjs` + `saveToJson.js`)
+  - `saveToJson.js`: `dedupKey()` 함수로 `originalSubtitle ?? detailSubtitle` 우선순위 적용
+  - `CnnvdCrawler.mjs`: `extractDetail` 반환값에 `originalSubtitle` 필드 추가
+  - `translate.js`: `...item` spread로 `originalSubtitle` 자동 보존 (변경 불필요)
+- [x] `table tbody tr` 셀렉터를 `selectors.js`로 분리 → `DETAIL_TABLE_ROWS: ".detail-content table tbody tr"` (범위를 detail-content 내부로 제한)
 
 **나머지 테스트 작성**
-- [ ] `validate.js` 단위 테스트 작성 (V1~V9)
-- [ ] `saveToJson.js` 단위 테스트 작성 (S1~S6)
-- [ ] `@playwright/test`로 E2E 테스트 작성 (E1~E4)
-- [ ] `package.json`에 `test:unit`, `test:e2e` 스크립트 추가
-- [ ] GitHub Actions에 테스트 스텝 추가
+- [x] `validate.js` 단위 테스트 작성 (V1~V9) — 9개 통과
+- [x] `saveToJson.js` 단위 테스트 작성 (S1~S7) — 7개 통과 (S7: originalSubtitle 중복 감지 추가)
+- [x] `BaseCrawler` 단위 테스트 작성 (withTimeout 4개 + retry 3개) — 7개 통과
+- [ ] `@playwright/test`로 E2E 테스트 작성 (E1~E4) — Phase 3 이후로 이동 (사이트 의존 테스트는 크롤러 추가 후 일괄 작성)
+- [x] `package.json`에 `test`, `test:unit`, `test:watch` 스크립트 추가
+- [x] GitHub Actions에 단위 테스트 스텝 추가 (`npm test`)
 
-### 예상 before/after
+### 실측 before/after
 
 | 항목 | Before | After |
 |------|--------|-------|
-| 테스트 파일 수 | 0개 | 3개 (validate, saveToJson, e2e) |
-| 테스트 케이스 수 | 0개 | 예상 19개 (V9 + S6 + E4) |
+| 테스트 파일 수 | 0개 | 3개 (validate, saveToJson, BaseCrawler) |
+| 테스트 케이스 수 | 0개 | **23개** (V9 + S7 + B7) |
+| 테스트 실행 시간 | — | ~920ms |
 | CI 테스트 실행 | 없음 | Actions에서 자동 실행 |
-| 엣지 케이스 문서화 | 없음 | 테스트 코드가 곧 명세 |
-| 회귀 감지 | 불가 | validate 규칙 변경 시 즉시 감지 |
+| 하드코딩 셀렉터 | 1개 (`table tbody tr`) | **0개** (전부 selectors.js) |
+| 중복 키 안정성 | 불안정 (번역 결과 의존) | **안정** (originalSubtitle) |
+| 회귀 감지 | 불가 | 즉시 감지 |
 
 ### 트레이드오프
 
@@ -395,9 +384,9 @@ Phase 1에서 Playwright 전환을 완료한 뒤 테스트를 작성하는 이�
 ## 작업 순서 요약
 
 ```
-Phase 1 (완료) → Phase 1.5 (완료)  → Phase 2 (현재)       → Phase 3      → Phase 4
-Playwright      extractDetail      테스트 작성 + 버그 수정   2번째 크롤러     TypeScript
-전환 ✅         구조 변경 ✅       (TDD, vitest + PW)      (1688.com)      전환
+Phase 1 (완료) → Phase 1.5 (완료)  → Phase 2 (완료)       → Phase 3 (현재) → Phase 4
+Playwright      extractDetail      테스트 23개 + 버그 3건    2번째 크롤러      TypeScript
+전환 ✅         구조 변경 ✅       TDD 수정 ✅              (1688.com)       전환
 ```
 
 **순서 결정 이유:**
@@ -417,14 +406,14 @@ Playwright      extractDetail      테스트 작성 + 버그 수정   2번째 �
 
 | 항목 | 초기 (crawling.mjs) | 현재 | Phase 1 후 | Phase 1.5 후 | Phase 2 후 | Phase 3 후 | Phase 4 후 |
 |------|--------------------|----|------------|-------------|------------|------------|------------|
-| 파일 수 | 1 | 7 | 7 (동일) | 7 (동일) | +3 (테스트) | +3 (크롤러) | 동일 |
-| 총 줄 수 | 130 | 422 | 434 | 444 | 측정 예정 | 측정 예정 | 측정 예정 |
-| 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | 0 | 0 | 0 |
+| 파일 수 | 1 | 7 | 7 (동일) | 7 (동일) | **9** (src 6 + test 3) | +3 (크롤러) | 동일 |
+| 총 줄 수 | 130 | 422 | 434 | 444 | **697** (src 448 + test 249) | 측정 예정 | 측정 예정 |
+| 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | **0** | 0 | 0 |
 | delay() 사용 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 타이머 누수 | 있음 | 있음 | **수정 완료** | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 |
-| 중복 키 안정성 | — | 불안정 (번역본) | 불안정 | 불안정 | 안정 (TDD) | 안정 | 안정 |
+| 중복 키 안정성 | — | 불안정 (번역본) | 불안정 | 불안정 | **안정 (originalSubtitle)** | 안정 | 안정 |
 | contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | **`{type,text}[]`** | 동일 | 동일 | 동일 |
-| 테스트 케이스 수 | 0 | 0 | 0 | 0 | 19+ (버그 수정 테스트 포함) | 측정 예정 | 측정 예정 |
-| 테스트 커버리지 | 0% | 0% | 0% | 0% | 측정 예정 | 측정 예정 | 측정 예정 |
+| 테스트 케이스 수 | 0 | 0 | 0 | 0 | **23개** | 측정 예정 | 측정 예정 |
+| 테스트 커버리지 | 0% | 0% | 0% | 0% | validate·save·BaseCrawler 100% | 측정 예정 | 측정 예정 |
 | 실행 시간 (20건) | 미측정 | 미측정 | 측정 예정 | 측정 예정 | 측정 예정 | — | 측정 예정 |
 | 새 크롤러 추가 시간 | — | — | — | — | — | 측정 예정 | — |

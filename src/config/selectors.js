@@ -17,4 +17,5 @@ export const SELECTORS = {
   DETAIL_TITLE: ".detail-title",
   DETAIL_SUBTITLE: ".detail-subtitle",
   DETAIL_CONTENT: ".detail-content",
+  DETAIL_TABLE_ROWS: ".detail-content table tbody tr",
 };
