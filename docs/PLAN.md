@@ -88,88 +88,27 @@ Playwright로 전환하면 `@playwright/test` 러너를 E2E 테스트에 바로 
 
 ---
 
-## Phase 1.5 — 코드 취약점 수정
+## Phase 1.5 — extractDetail 구조 변경
 
 > Playwright 전환 직후, 테스트 작성 직전에 수행한다.
-> 버그가 있는 상태에서 테스트를 작성하면 잘못된 동작을 "정상"으로 고정하게 된다.
-> 먼저 버그를 잡고, 그 수정된 동작을 기준으로 테스트를 쌓는다.
+> 이 작업만 Phase 2 이전에 분리하는 이유: `extractDetail`의 반환 타입이 HTML 문자열 → `{type, text}[]`로 바뀌는 **인터페이스 변경**이기 때문이다. 기존 반환 타입이 바뀌면 테스트의 기대값 자체가 달라지므로, TDD로 접근할 수 없다 (먼저 "올바른 반환 형태"를 확정해야 테스트를 쌓을 수 있다).
 
-### 발견된 취약점 목록
+### 발견된 취약점 목록 (전체)
 
-코드 리뷰에서 발견한 6개 항목을 우선순위별로 정리한다.
+코드 리뷰에서 발견한 6개 항목. 이 Phase에서는 `extractDetail` 구조 변경만 수행하고, 나머지는 Phase 2에서 TDD로 수정한다.
 
-| 우선순위 | 항목 | 유형 | 위치 |
-|---------|------|------|------|
-| **높음** | withTimeout 타이머 누수 | 버그 | `BaseCrawler.mjs:82-92` |
-| **높음** | 중복 키가 번역된 텍스트 기반 | 로직 결함 | `saveToJson.js:22` |
-| **중간** | extractDetail에서 HTML 스타일 직접 삽입 | 관심사 분리 | `CnnvdCrawler.mjs:99-106` |
-| **중간** | table 셀렉터 미분리 | 일관성 | `CnnvdCrawler.mjs:121` |
-| **낮음** | 번역 concurrency 제어 없음 | 확장성 | `translate.js:42-48` |
-| **낮음** | PAGE_COUNT 등 설정 하드코딩 | 유연성 | `CnnvdCrawler.mjs:5-6` |
-
----
-
-### [높음] withTimeout 타이머 누수
-
-**문제**: `Promise.race`에서 `fn()`이 먼저 resolve되어도 `setTimeout` 타이머가 정리되지 않는다. 반복 호출 시 타이머가 쌓이고, Node.js 프로세스가 종료되지 않을 수 있다.
-
-**현재 코드** (`BaseCrawler.mjs:82-92`):
-```js
-async withTimeout(fn, ms = 10000) {
-  return Promise.race([
-    fn(),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`[withTimeout] ${ms}ms 초과`)), ms),
-    ),
-  ]);
-}
-```
-
-**수정안**:
-```js
-async withTimeout(fn, ms = 10000) {
-  let timer;
-  try {
-    return await Promise.race([
-      fn(),
-      new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`[withTimeout] ${ms}ms 초과`)), ms);
-      }),
-    ]);
-  } finally {
-    clearTimeout(timer);
-  }
-}
-```
-
-**영향 범위**: BaseCrawler 하나의 메서드. 수정 후 동작 변화 없이 리소스 누수만 제거.
+| 우선순위 | 항목 | 유형 | 위치 | 처리 시점 |
+|---------|------|------|------|----------|
+| **높음** | withTimeout 타이머 누수 | 버그 | `BaseCrawler.mjs:82-92` | **Phase 2** (TDD) |
+| **높음** | 중복 키가 번역된 텍스트 기반 | 로직 결함 | `saveToJson.js:22` | **Phase 2** (TDD) |
+| **중간** | extractDetail에서 HTML 스타일 직접 삽입 | 인터페이스 변경 | `CnnvdCrawler.mjs:99-106` | **이번 Phase** |
+| **중간** | table 셀렉터 미분리 + 범위 제한 없음 | 버그 + 일관성 | `CnnvdCrawler.mjs:121` | **Phase 2** (TDD) |
+| **낮음** | 번역 concurrency 제어 없음 | 확장성 | `translate.js:42-48` | Phase 3 이후 |
+| **낮음** | PAGE_COUNT 등 설정 하드코딩 | 유연성 | `CnnvdCrawler.mjs:5-6` | Phase 3 이후 |
 
 ---
 
-### [높음] 중복 키가 번역된 텍스트 기반
-
-**문제**: `saveToJson.js`에서 `detailSubtitle`(예: "发布时间：2026-03-06 11:40:36")을 중복 키로 사용하는데, 이 값이 번역 단계를 거친 후 비교된다. 번역 결과가 매번 미세하게 달라지면("발표 시간" vs "게시 시간") 같은 글이 중복 저장된다.
-
-**현재 흐름**:
-```
-수집 → 검증 → 번역 (subtitle도 번역됨) → 저장 (번역된 subtitle로 중복 체크)
-```
-
-**대안 검토**:
-
-| 방안 | 장점 | 단점 | 결정 |
-|------|------|------|------|
-| subtitle 번역 안 함 | 가장 단순, 날짜 문자열은 번역 불필요 | 번역 파이프라인 예외 처리 필요 | 탈락 |
-| `originalSubtitle` 필드 보존 | 원본으로 정확한 중복 체크, 번역본도 유지 | 데이터 구조 변경 | **채택** |
-| 해시 기반 중복 키 | 번역 무관한 고유 키 | 과도한 복잡성 | 탈락 |
-
-**수정안**: 크롤링 단계에서 원본 subtitle을 `originalSubtitle` 필드로 보존하고, `saveToJson.js`에서 이 필드로 중복 체크한다.
-
-**영향 범위**: CnnvdCrawler(필드 추가) + saveToJson(비교 키 변경). validate.js, translate.js는 변경 없음.
-
----
-
-### [중간] extractDetail에서 HTML 스타일 직접 삽입
+### extractDetail에서 HTML 스타일 직접 삽입
 
 **문제**: `CnnvdCrawler.mjs:99-106`에서 `<div class="font-extrabold mt-3 mb-1">`같은 Tailwind 클래스를 크롤러 안에서 직접 삽입하고 있다. 크롤러의 책임은 데이터 수집이고, 프레젠테이션 스타일링은 출력/렌더링 단계에서 해야 한다.
 
@@ -185,45 +124,25 @@ sections.push(`<div class="font-extrabold mt-3 mb-1">${tagText}</div>`);
 { type: "paragraph", text: "Cisco Catalyst..." }
 ```
 
+**왜 TDD로 할 수 없는가**:
+- 반환 타입 자체가 `string` → `{ type, text }[]`로 변경됨
+- "기존 동작을 검증하는 테스트"를 먼저 쓰면 HTML 문자열을 기대값으로 고정하게 되고, 구조 변경 시 테스트를 전면 재작성해야 함
+- 반면 withTimeout 누수나 dedup 키 문제는 반환 타입이 그대로이므로 TDD 가능
+
 **트레이드오프**:
 - 기존 output/result.json의 데이터 구조가 바뀜 → 하위 호환 깨짐
 - 그러나 현재 소비자가 없으므로 (result.json을 읽는 프론트엔드 없음) 지금이 바꿀 적기
 - 구조화된 데이터는 번역 단계에서도 heading/paragraph를 구분해서 처리 가능
+- extractDetail 구조 변경은 translate.js에도 영향 (contents가 문자열 → 배열로 바뀜)
 
----
+### 작업 목록
 
-### [중간] table 셀렉터 미분리
-
-**문제**: `CnnvdCrawler.mjs:121`에서 `"table tbody tr"`가 `selectors.js`에 없이 직접 사용되고 있다. 셀렉터 분리 원칙에 어긋난다.
-
-**수정안**: `selectors.js`에 `TABLE_ROWS: "table tbody tr"`, `TABLE_CELLS: "td"` 추가.
-
-**영향 범위**: selectors.js(추가) + CnnvdCrawler.mjs(상수 참조로 교체). 1분 수정.
-
----
-
-### [낮음] 번역 concurrency 제어 없음
-
-**문제**: `translate.js:42-48`에서 항목별 4개 API 호출을 `Promise.all`로 병렬 실행하지만, 항목 수가 늘면 API rate limit에 걸릴 수 있다. 현재 8건 규모에서는 문제없음.
-
-**판단**: 현재 규모(8건 × 4 = 32 호출)에서는 수정 불필요. Phase 3(1688.com 크롤러)에서 항목 수가 늘어나면 `p-limit` 등으로 concurrency 제어 추가. 지금은 **인지만 해두고 넘어간다**.
-
----
-
-### [낮음] PAGE_COUNT 등 설정 하드코딩
-
-**문제**: `CnnvdCrawler.mjs:5-6`의 `PAGE_COUNT = 2`, `ITEMS_PER_PAGE = 10`이 하드코딩되어 있다.
-
-**판단**: 환경변수 또는 config로 외부화 가능하지만, 현재는 단일 크롤러이고 변경 빈도가 낮다. Phase 3(두 번째 크롤러)에서 크롤러별 설정 구조가 필요해지면 그때 함께 처리한다. **지금은 넘어간다**.
-
----
-
-### 작업 목록 (이번 Phase에서 수행)
-
-- [ ] `withTimeout` 타이머 누수 수정 (`BaseCrawler.mjs`)
-- [ ] 중복 키를 `originalSubtitle`로 변경 (`CnnvdCrawler.mjs` + `saveToJson.js`)
-- [ ] `extractDetail` 반환 구조를 `{ type, text }` 형태로 변경 (`CnnvdCrawler.mjs`)
-- [ ] `table tbody tr` 셀렉터를 `selectors.js`로 분리
+- [ ] `extractDetail` 반환 구조를 `{ type, text }[]` 형태로 변경 (`CnnvdCrawler.mjs`)
+- [ ] `translate.js` — contents가 배열로 바뀜에 따라 번역 로직 수정
+  - 현재: `translateText(item.contents)` — 문자열 하나를 통째로 전달
+  - 변경 후: 배열의 각 요소별로 `translateText(element.text)` 호출 필요
+  - 결정 필요: heading과 paragraph의 번역 전략을 다르게 할 것인지 (heading은 짧아서 한번에, paragraph는 길 수 있음)
+  - 결정 필요: `table` 필드도 구조화 대상인지 (현재 `" + "` 구분 문자열)
 - [ ] 수정 후 파이프라인 실행해서 정상 동작 확인
 - [ ] result.json 데이터 구조 변경 확인
 
@@ -231,27 +150,32 @@ sections.push(`<div class="font-extrabold mt-3 mb-1">${tagText}</div>`);
 
 | 항목 | Before | After |
 |------|--------|-------|
-| withTimeout 타이머 정리 | 없음 (누수) | `clearTimeout` 적용 |
-| 중복 체크 키 | 번역된 subtitle (불안정) | 원본 originalSubtitle (안정) |
 | extractDetail 반환값 | HTML 문자열 (스타일 포함) | 구조화 데이터 `{ type, text }[]` |
-| selectors.js 누락 셀렉터 | table 관련 1개 누락 | 전수 등록 |
-
-### 트레이드오프
-
-- result.json 데이터 구조가 바뀌므로 기존 데이터와 호환 안 됨 → 기존 result.json 삭제 후 재수집 필요
-- extractDetail 구조 변경은 translate.js에도 영향 (contents가 문자열 → 배열로 바뀜)
-- 그러나 현재 소비자가 없고, 테스트 작성 전이라 지금이 구조 변경의 최적 시점
-- 낮음 우선순위 2건은 의도적으로 미룸 — 현재 규모에서 과도한 추상화를 피하기 위함
 
 ---
 
-## Phase 2 — 테스트 코드 작성
+## Phase 2 — 테스트 코드 작성 + 버그 수정 (TDD)
 
 ### 배경
 
 현재 파이프라인에 테스트 코드가 전혀 없다. 정상 흐름에서는 보이지 않던 엣지 케이스(본문 없는 항목 12건)가 실제 실행에서 발견됐다. 검증 로직(`validate.js`)과 저장 로직(`saveToJson.js`)은 이미 브라우저와 분리되어 있어 픽스처 기반 단위 테스트가 바로 가능한 구조다.
 
-Phase 1.5에서 버그를 먼저 수정했기 때문에, 테스트는 수정된 올바른 동작을 기준으로 작성한다.
+### TDD로 버그 수정을 함께 진행하는 이유
+
+Phase 1.5에서 분리된 취약점 중 **인터페이스가 바뀌지 않는 버그**는 TDD로 접근한다:
+1. 현재의 **잘못된 동작을 검증하는 실패 테스트**를 먼저 작성한다 (Red)
+2. 코드를 수정해서 테스트를 통과시킨다 (Green)
+3. 필요하면 리팩토링한다 (Refactor)
+
+이렇게 하면 "왜 이 수정이 필요한지"가 테스트로 문서화되고, 회귀 방지도 자동으로 확보된다.
+
+#### 이 Phase에서 TDD로 수정할 취약점
+
+| 항목 | TDD 접근 |
+|------|----------|
+| **withTimeout 타이머 누수** | 타이머 누수를 감지하는 테스트 작성 → `finally { clearTimeout(timer) }` 패턴으로 수정 (아래 코드 예시 참고) |
+| **중복 키가 번역된 텍스트 기반** | 번역 결과가 달라져도 중복 감지하는 테스트 작성 → `originalSubtitle` 필드 도입 |
+| **table 셀렉터 미분리 + 범위 제한 없음** | `document.querySelectorAll("table tbody tr")`이 페이지 전체 table을 긁는 버그 — `detailContent` 내부로 범위 제한 + 셀렉터를 `selectors.js`로 이동 |
 
 Phase 1에서 Playwright 전환을 완료한 뒤 테스트를 작성하는 이유:
 - 단위 테스트(validate, saveToJson)는 브라우저 무관이므로 전환 순서에 영향 없음
@@ -331,9 +255,33 @@ Phase 1에서 Playwright 전환을 완료한 뒤 테스트를 작성하는 이�
 
 ### 작업 목록
 
+**환경 세팅**
 - [ ] vitest 설치 및 설정
 - [ ] 테스트 픽스처 준비 (`tests/fixtures/`)
   - 정상 데이터, 빈 데이터, 중복 데이터 JSON
+
+**TDD로 버그 수정 (Red → Green → Refactor)**
+- [ ] `withTimeout` 타이머 누수 — 실패 테스트 작성 → `clearTimeout` 수정 (`BaseCrawler.mjs`)
+  - 수정 방향:
+    ```js
+    async withTimeout(fn, ms = 10000) {
+      let timer;
+      try {
+        return await Promise.race([
+          fn(),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`[withTimeout] ${ms}ms 초과`)), ms);
+          }),
+        ]);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    ```
+- [ ] 중복 키 문제 — 번역 결과 다를 때 중복 감지 실패 테스트 작성 → `originalSubtitle` 도입 (`CnnvdCrawler.mjs` + `saveToJson.js` + `translate.js` — 번역 시 원문 subtitle 보존 필요)
+- [ ] `table tbody tr` 셀렉터를 `selectors.js`로 분리 (리팩토링, 동작 변경 없음)
+
+**나머지 테스트 작성**
 - [ ] `validate.js` 단위 테스트 작성 (V1~V9)
 - [ ] `saveToJson.js` 단위 테스트 작성 (S1~S6)
 - [ ] `@playwright/test`로 E2E 테스트 작성 (E1~E4)
@@ -369,12 +317,12 @@ Phase 1에서 Playwright 전환을 완료한 뒤 테스트를 작성하는 이�
 
 | 사이트 | 장점 | 단점 | 결정 |
 |--------|------|------|------|
-| **1688.com** (알리바바 도매) | 이커머스 도메인 직결, 상품 데이터 수집 실무 연관 최고 | 봇 차단 강함, 로그인 필요할 수 있음 | **1순위** |
-| **AliExpress** | 공개 상품 데이터, 구매대행 직결 | 구조 변경 잦음, 봇 차단 | 2순위 |
-| **NVD (NIST)** | CNNVD와 동일 도메인(보안 DB), 비교 용이 | 이커머스 아님 | 탈락 |
-| **공공데이터 포털** | 차단 없음, 안정적 | 크롤링 난이도 낮아 기술 어필 약함 | 탈락 |
+| **1688.com** (알리바바 도매) | 이커머스 상품 데이터 수집, SPA + 봇 차단 대응 경험 | 봇 차단 강함, 로그인 필요할 수 있음 | **1순위** |
+| **AliExpress** | 공개 상품 데이터 | 구조 변경 잦음, 봇 차단 | 2순위 |
+| **NVD (NIST)** | CNNVD와 동일 도메인(보안 DB), 비교 용이 | 도메인 다양성 부족 | 탈락 |
+| **공공데이터 포털** | 차단 없음, 안정적 | 크롤링 난이도 낮아 BaseCrawler 검증에 부족 | 탈락 |
 
-**1688.com 채택 이유**: 이커머스 상품 데이터(상품명, 옵션, 가격, 이미지)를 실제로 수집하는 크롤러를 만들면 실무 경험과 직결된다. 봇 차단 대응도 장애 대응 역량 어필에 유리하다.
+**1688.com 채택 이유**: CNNVD(정적 콘텐츠)와 성격이 다른 이커머스 도메인을 추가해야 BaseCrawler 추상화의 범용성을 실제로 검증할 수 있다. 상품명·옵션·가격·이미지 등 구조화된 상품 데이터 수집은 봇 차단 대응, 동적 렌더링 처리 등 기술적 난이도가 높아 BaseCrawler 확장성을 증명하기에 적합하다.
 
 ### 작업 목록
 
@@ -397,11 +345,20 @@ Phase 1에서 Playwright 전환을 완료한 뒤 테스트를 작성하는 이�
 | 작성 필요 파일 | selectors + crawler + BaseCrawler | selectors + crawler만 |
 | 예상 추가 소요 시간 | — | 측정 후 기록 |
 
+### 기술적 리스크
+
+| 리스크 | 상세 | 대응 |
+|--------|------|------|
+| 봇 차단 | Cloudflare + 자체 방어, 로그인 없이 접근 가능 범위 제한적 | UserAgent 설정, 요청 간격 조절, stealth plugin 검토 |
+| 로그인 벽 | 일부 데이터는 로그인 필수 | 쿠키 주입 또는 로그인 불필요 페이지로 범위 축소 |
+| 안정성 미확보 시 | 차단이 빈번하면 자동화 파이프라인으로 운영 불가 | 대안 사이트(AliExpress 등)로 전환 |
+
 ### 트레이드오프
 
 - 1688.com은 봇 차단이 강해 UserAgent 설정, 요청 간격 조절 등 추가 작업 필요
 - 로그인 벽이 있으면 쿠키 주입 또는 범위 축소(로그인 불필요 페이지만) 필요
-- 그러나 이런 장애 대응 경험 자체가 "차단·봇 방지 대응" 역량 증명이 됨
+- 그러나 봇 차단 대응은 실무 크롤러에서 빈번한 문제이므로 대응 패턴을 확보하는 것 자체가 가치 있음
+- 안정성이 확보되지 않으면 대안 사이트로 전환하여 BaseCrawler 확장성 검증에 집중
 
 ---
 
@@ -433,22 +390,21 @@ Phase 1에서 Playwright 전환을 완료한 뒤 테스트를 작성하는 이�
 ## 작업 순서 요약
 
 ```
-Phase 1 (현재) → Phase 1.5     → Phase 2       → Phase 3      → Phase 4
-Playwright      코드 취약점      테스트 작성       2번째 크롤러     TypeScript
-전환            수정            (vitest + PW)    (1688.com)      전환
+Phase 1 (현재) → Phase 1.5        → Phase 2              → Phase 3      → Phase 4
+Playwright      extractDetail      테스트 작성 + 버그 수정   2번째 크롤러     TypeScript
+전환            구조 변경          (TDD, vitest + PW)      (1688.com)      전환
 ```
 
 **순서 결정 이유:**
 1. Playwright 먼저 → E2E 테스트를 재작성 없이 바로 쌓을 수 있음
-2. 취약점 수정 → 버그 있는 상태에서 테스트를 쓰면 잘못된 동작을 "정상"으로 고정하게 됨
-3. 테스트 → 이후 Phase의 리팩토링을 회귀 감지망 위에서 진행 가능
+2. extractDetail 구조 변경 → 반환 타입이 바뀌는 인터페이스 변경이라 TDD 불가, 먼저 확정해야 테스트 기대값을 정할 수 있음
+3. 테스트 + TDD 버그 수정 → 실패 테스트를 먼저 쓰고 코드를 고치면 "왜 고쳤는가"가 테스트로 문서화됨
 4. 두 번째 크롤러 → BaseCrawler 구조 검증 + 이커머스 도메인 경험
 5. TypeScript → 위 단계가 안정된 뒤 타입 추가 (기존 테스트가 전환 안전망)
 
 각 Phase 완료 시:
 1. before/after 수치를 이 파일에 실측값으로 업데이트
 2. 커밋 메시지에 수치 포함
-3. 블로그 포스팅 초안에 해당 내용 추가
 
 ---
 
@@ -456,14 +412,14 @@ Playwright      코드 취약점      테스트 작성       2번째 크롤러  
 
 | 항목 | 초기 (crawling.mjs) | 현재 | Phase 1 후 | Phase 1.5 후 | Phase 2 후 | Phase 3 후 | Phase 4 후 |
 |------|--------------------|----|------------|-------------|------------|------------|------------|
-| 파일 수 | 1 | 6 | 측정 예정 | 측정 예정 | +3 (테스트) | +3 (크롤러) | 동일 |
+| 파일 수 | 1 | 7 | 측정 예정 | 측정 예정 | +3 (테스트) | +3 (크롤러) | 동일 |
 | 총 줄 수 | 130 | 422 | 측정 예정 | 측정 예정 | 측정 예정 | 측정 예정 | 측정 예정 |
-| 하드코딩 셀렉터 | 9 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | 0 | 0 | 0 |
 | delay() 사용 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 타이머 누수 | 있음 | 있음 | 있음 | 수정 | 수정 | 수정 | 수정 |
-| 중복 키 안정성 | — | 불안정 (번역본) | 불안정 | 안정 (원본) | 안정 | 안정 | 안정 |
+| 타이머 누수 | 있음 | 있음 | 있음 | 있음 | 수정 (TDD) | 수정 | 수정 |
+| 중복 키 안정성 | — | 불안정 (번역본) | 불안정 | 불안정 | 안정 (TDD) | 안정 | 안정 |
 | contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | `{type,text}[]` | 동일 | 동일 | 동일 |
-| 테스트 케이스 수 | 0 | 0 | 0 | 0 | 19 | 측정 예정 | 측정 예정 |
+| 테스트 케이스 수 | 0 | 0 | 0 | 0 | 19+ (버그 수정 테스트 포함) | 측정 예정 | 측정 예정 |
 | 테스트 커버리지 | 0% | 0% | 0% | 0% | 측정 예정 | 측정 예정 | 측정 예정 |
 | 실행 시간 (20건) | 미측정 | 미측정 | 측정 예정 | 측정 예정 | 측정 예정 | — | 측정 예정 |
 | 새 크롤러 추가 시간 | — | — | — | — | — | 측정 예정 | — |
