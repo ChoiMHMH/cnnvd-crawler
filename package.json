@@ -5,6 +5,7 @@
   "main": "index.mjs",
   "scripts": {
     "start": "node index.mjs",
+    "start:books": "node index.books.mjs",
     "test": "npx vitest run",
     "test:unit": "npx vitest run",
     "test:watch": "npx vitest"

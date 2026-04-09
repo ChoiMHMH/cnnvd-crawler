@@ -28,10 +28,11 @@
 | **Phase 1** ✅ | Puppeteer → Playwright 전환 | BaseCrawler 추상화로 교체 범위 2개 파일로 격리, auto-waiting 확보 |
 | **Phase 1.5** ✅ | extractDetail 구조 변경 | HTML 문자열 → `{type, text}[]` 구조화 데이터, translate/validate 연쇄 수정 |
 | **Phase 2** ✅ | 테스트 코드 작성 + TDD 버그 수정 | 23개 테스트 (vitest), 버그 3건 수정 (타이머 누수, dedup 키, 셀렉터 범위), CI 통합 |
+| **Phase 3-A** ✅ | BooksCrawler 추가 (BaseCrawler 확장성 검증) | BaseCrawler 수정 0줄로 재사용, 신규 3파일+진입점 1, validate/save 옵션화로 파이프라인 재사용, 테스트 28개 |
 
 ---
 
-## Phase 3 — 두 번째 크롤러 추가 (확장성 실증) ← 현재
+## Phase 3 — 두 번째 크롤러 추가 (확장성 실증)
 
 ### 배경
 
@@ -91,12 +92,20 @@ Playwright headless 브라우저로 Alibaba.com에 접근한 결과:
 | **AliExpress** | 실서비스 이커머스 | 차단/불안정 가능성 | 예비 후보 |
 
 작업 목록:
-- [ ] `books.toscrape.com` 셀렉터 조사 및 데이터 스키마 정의
-- [ ] `BooksCrawler` 작성 — `BaseCrawler` 상속
-- [ ] `extractList()` / `extractDetail()` 구현
-- [ ] 기존 파이프라인(검증 → 저장) 재사용 연결
-- [ ] 작업 소요 시간 및 변경 파일 수 기록
-- [ ] before/after 수치 업데이트
+- [x] `books.toscrape.com` 셀렉터 조사 및 데이터 스키마 정의
+- [x] `BooksCrawler` 작성 — `BaseCrawler` 상속
+- [x] `extractList()` / `extractDetail()` 구현
+- [x] 기존 파이프라인(검증 → 저장) 재사용 연결
+- [x] 작업 소요 시간 및 변경 파일 수 기록
+- [x] before/after 수치 업데이트
+
+Phase 3-A 실측 결과:
+- 신규 파일 3개: `booksSelectors.js`, `BooksCrawler.mjs`, `BooksCrawler.test.mjs`
+- 기존 파일 수정 2개: `validate.js` (필수 필드 옵션화), `saveToJson.js` (dedupKey 옵션화)
+- 진입점 추가 1개: `index.books.mjs`
+- `BaseCrawler`의 `launch()`, `close()`, `navigate()`, `retry()`, `withTimeout()` 전부 재사용 — 수정 0줄
+- validate, save 파이프라인 모듈 재사용 — 옵션 파라미터 추가만으로 연결
+- 테스트 5건 추가 (총 28건)
 
 #### Phase 3-B: 실서비스 대상 접근 전략 정리
 
@@ -166,12 +175,12 @@ Playwright      구조 변경          테스트·버그 수정    2번째 크�
 
 | 항목 | 초기 (crawling.mjs) | 현재 | Phase 1 후 | Phase 1.5 후 | Phase 2 후 | Phase 3-A 후 | Phase 3-B 후 | Phase 4 후 |
 |------|--------------------|------|------------|---------------|------------|--------------|--------------|------------|
-| 파일 수 | 1 | 7 | 7 | 7 | **9** (src 6 + test 3) | 측정 예정 | 측정 예정 | 측정 예정 |
-| 총 줄 수 | 130 | 422 | 434 | 444 | **697** (src 448 + test 249) | 측정 예정 | 측정 예정 | 측정 예정 |
-| 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | **0** | 측정 예정 | 측정 예정 | 측정 예정 |
+| 파일 수 | 1 | 7 | 7 | 7 | **9** (src 6 + test 3) | **14** (src 8 + test 4 + entry 2) | 측정 예정 | 측정 예정 |
+| 총 줄 수 | 130 | 422 | 434 | 444 | **697** (src 448 + test 249) | **995** (src 654 + test 341) | 측정 예정 | 측정 예정 |
+| 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | **0** | **0** | 측정 예정 | 측정 예정 |
 | delay() 사용 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 타이머 누수 | 있음 | 있음 | **수정 완료** | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 |
-| 중복 키 안정성 | — | 불안정 | 불안정 | 불안정 | **안정 (originalSubtitle)** | 안정 | 안정 | 안정 |
-| contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | **`{type,text}[]`** | 동일 | 동일 | 동일 | 동일 |
-| 테스트 케이스 수 | 0 | 0 | 0 | 0 | **23개** | 측정 예정 | 측정 예정 | 측정 예정 |
-| 테스트 커버리지 | 0% | 0% | 0% | 0% | validate·save·BaseCrawler 100% | 측정 예정 | 측정 예정 | 측정 예정 |
+| 중복 키 안정성 | — | 불안정 | 불안정 | 불안정 | **안정 (originalSubtitle)** | **안정 (dedupKey 옵션화)** | 안정 | 안정 |
+| contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | **`{type,text}[]`** | 동일 | 동일 (크롤러별 스키마 분리) | 동일 | 동일 |
+| 테스트 케이스 수 | 0 | 0 | 0 | 0 | **23개** | **28개** (+5 BooksCrawler) | 측정 예정 | 측정 예정 |
+| 테스트 커버리지 | 0% | 0% | 0% | 0% | validate·save·BaseCrawler 100% | +BooksCrawler extractList/extractDetail | 측정 예정 | 측정 예정 |
