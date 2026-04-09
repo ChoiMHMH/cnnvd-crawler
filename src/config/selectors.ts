@@ -4,7 +4,7 @@
 export const SELECTORS = {
   // 페이지네이션
   PAGINATION_ITEMS: ".el-pager li",
-  PAGINATION_ITEM_N: (n) => `.el-pager li:nth-child(${n})`,
+  PAGINATION_ITEM_N: (n: number) => `.el-pager li:nth-child(${n})`,
 
   // 목록 페이지
   CONTENT_CENTER: ".content-center",
@@ -18,4 +18,4 @@ export const SELECTORS = {
   DETAIL_SUBTITLE: ".detail-subtitle",
   DETAIL_CONTENT: ".detail-content",
   DETAIL_TABLE_ROWS: ".detail-content table tbody tr",
-};
+} as const;

@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
-import BooksCrawler from "../src/crawlers/BooksCrawler.mjs";
+import BooksCrawler from "../src/crawlers/BooksCrawler.js";
 
 /**
  * BooksCrawler 통합 테스트
  * books.toscrape.com에 실제 접속하여 extractList / extractDetail을 검증합니다.
- * 네트워크 의존적이므로 CI에서는 필요 시 스킵할 수 있습니다.
  */
 
-let crawler;
+let crawler: BooksCrawler;
 
 beforeAll(async () => {
   crawler = new BooksCrawler();
@@ -69,20 +68,19 @@ describe("BooksCrawler.getNextPageUrl", () => {
 
 describe("validate with custom requiredFields", () => {
   it("BooksCrawler 데이터가 커스텀 필수 필드 검증을 통과한다", async () => {
-    // validate 모듈 임포트
     const { validate } = await import("../src/validate.js");
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const bookFields = [
-      { field: "title", check: "string" },
-      { field: "price", check: "string" },
-      { field: "upc", check: "string" },
+      { field: "title", check: "string" as const },
+      { field: "price", check: "string" as const },
+      { field: "upc", check: "string" as const },
     ];
 
     const items = [
       { title: "Test Book", price: "£10.00", upc: "abc123" },
-      { title: "", price: "£10.00", upc: "abc456" }, // title 빈 값 → 실패
+      { title: "", price: "£10.00", upc: "abc456" },
     ];
 
     const result = validate(items, { requiredFields: bookFields });

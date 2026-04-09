@@ -33,6 +33,8 @@
 | **Phase 2** ✅ | 테스트 코드 작성 + TDD 버그 수정 | 23개 테스트 (vitest), 버그 3건 수정 (타이머 누수, dedup 키, 셀렉터 범위), CI 통합 |
 | **Phase 3-A** ✅ | BooksCrawler 추가 (BaseCrawler 확장성 검증) | BaseCrawler 수정 0줄로 재사용, 신규 3파일+진입점 1, validate/save 옵션화로 파이프라인 재사용, 테스트 28개 |
 | **Phase 3-A-2** ✅ | 파이프라인 진입점 재사용 구조 정리 | runCrawlerPipeline + pipelineConfigs 도입, 진입점 2→1개, 신규 사이트=크롤러+셀렉터+config 1항목, 테스트 31개 |
+| **Phase 3-B** ✅ | 실서비스 접근 전략 정리 | 1688 불가, Alibaba 과잉, AliExpress Affiliate API 채택, 하이브리드 패턴 설계, 전략 문서화 |
+| **Phase 4** ✅ | TypeScript 전환 | 전 파일 .ts 전환, tsc --noEmit 통과, Runnable/PipelineConfig 등 인터페이스 명시, 테스트 31개 유지 |
 
 ---
 
@@ -132,16 +134,25 @@ Phase 3-A-2 실측 결과:
 - 현재 드러난 장애를 수정하는 작업은 아니므로, 지나친 일반화가 되지 않도록 범위를 작게 유지해야 한다.
 - 다만 세 번째 크롤러 추가 전에 진입점 중복을 정리해 두면 이후 변경의 설명력과 유지보수성이 높아진다.
 
-#### Phase 3-B: 실서비스 대상 접근 전략 정리
+#### Phase 3-B: 실서비스 대상 접근 전략 정리 ✅
 
 목적은 차단이 강한 이커머스 도메인에서 어떤 수집 전략이 현실적인지 문서화하고, 필요 시 API 중심 접근으로 전환하는 것이다.
 
 작업 목록:
-- [ ] 1688 Open Platform API 문서 분석 및 인증 흐름 파악
-- [ ] Alibaba.com / AliExpress의 공개 접근 가능 범위 재검토
-- [ ] API 우선 / 크롤링 보완 하이브리드 패턴 초안 작성
-- [ ] 각 접근 방식의 제약(약관, 인증, 안정성, 운영비용) 비교
-- [ ] 후속 구현 우선순위 결정
+- [x] 1688 Open Platform API 문서 분석 및 인증 흐름 파악
+- [x] Alibaba.com / AliExpress의 공개 접근 가능 범위 재검토
+- [x] API 우선 / 크롤링 보완 하이브리드 패턴 초안 작성
+- [x] 각 접근 방식의 제약(약관, 인증, 안정성, 운영비용) 비교
+- [x] 후속 구현 우선순위 결정
+
+상세 전략 문서: [ecommerce-access-strategy.md](ecommerce-access-strategy.md)
+
+핵심 결론:
+- 1688: 공식 API는 중국 기업 전용 → 현재 접근 불가
+- Alibaba.com: 기업 통합 목적 API → 개인 프로젝트에 과한 절차
+- **AliExpress Affiliate API가 현실적 선택** — 개인 등록 가능, 무료, 상품 검색/상세 제공
+- 기존 `runCrawlerPipeline` 구조에 API 기반 수집기도 `run()` 인터페이스만 맞추면 연결 가능
+- 우회 크롤링은 공개 레포에서 채택하지 않음 (약관 준수 원칙)
 
 ### Phase 3 트레이드오프
 
@@ -159,28 +170,43 @@ Phase 3-A-2 실측 결과:
 
 ### 작업 목록
 
-- [ ] `tsconfig.json` 설정 (ESM + Node.js 환경)
-- [ ] `BaseCrawler.mjs` → `BaseCrawler.ts` 전환
-  - `ICrawler` 인터페이스 정의 (`run()`, `extractList()`, `extractDetail()`)
-- [ ] `CnnvdCrawler.mjs` → `CnnvdCrawler.ts` 전환
-- [ ] `validate.js`, `saveToJson.js`, `translate.js` 전환
-- [ ] 빌드 스크립트 추가 (`tsx` 또는 `tsup`)
-- [ ] vitest 설정은 변경 없이 그대로 동작 확인
+- [x] `tsconfig.json` 설정 (ESM + Node16 모듈)
+- [x] `BaseCrawler.mjs` → `BaseCrawler.ts` 전환
+  - `Runnable` 인터페이스 정의 (`run()`)
+  - `CnnvdItem`, `BookListItem`, `BookDetailItem` 타입 정의
+- [x] `CnnvdCrawler.mjs` → `CnnvdCrawler.ts` 전환
+- [x] `BooksCrawler.mjs` → `BooksCrawler.ts` 전환
+- [x] `validate.js` → `validate.ts` (FieldCheck, ValidateOptions 타입 추가)
+- [x] `saveToJson.js` → `saveToJson.ts` (SaveOptions 타입 추가)
+- [x] `translate.js` → `translate.ts` 전환
+- [x] `runCrawlerPipeline.mjs` → `runCrawlerPipeline.ts` (PipelineConfig 인터페이스)
+- [x] `pipelineConfigs.js` → `pipelineConfigs.ts` 전환
+- [x] `selectors.js`, `booksSelectors.js` → `.ts` 전환 (`as const`)
+- [x] `index.mjs` → `index.ts` 전환
+- [x] `tsx` 런타임 추가, `tsc --noEmit` 타입 체크 통과
+- [x] vitest 31개 테스트 전부 통과 확인
+
+Phase 4 실측 결과:
+- `.mjs`/`.js` 파일 15개 → `.ts` 파일 16개 (src 10 + test 5 + entry 1)
+- 총 줄 수: 1153 → **1122** (src 710 + test 412) — 타입 추가에도 불구하고 줄 수 감소 (JS 보일러플레이트 제거)
+- `tsc --noEmit` 타입 체크 통과
+- 런타임: `tsx` 사용 (빌드 없이 직접 실행)
+- 테스트: 31개 유지 (전부 통과)
 
 ### 트레이드오프
 
-- 전환 공수가 있음
-- 빌드 단계가 추가되어 실행 전 컴파일이 필요할 수 있음
-- 그러나 타입 안정성 + 인터페이스 명시 + IDE 자동완성으로 유지보수성이 높아진다
+- `tsx` 런타임 의존성 추가 (빌드 없이 직접 실행하는 대신 런타임 변환)
+- `any` 타입 1곳 사용 (`Runnable.run()` 반환 — 크롤러별 반환 타입이 다르기 때문)
+- 그러나 타입 안정성 + 인터페이스 명시 + IDE 자동완성으로 유지보수성이 높아졌다
 
 ---
 
 ## 작업 순서 요약
 
 ```
-Phase 1 (완료) → Phase 1.5 (완료) → Phase 2 (완료) → Phase 3-A (완료) → Phase 3-A-2 → Phase 3-B → Phase 4
-Playwright      구조 변경          테스트·버그 수정    2번째 크롤러      진입점 재사용   실서비스 전략   TypeScript
-전환 ✅         완료 ✅             완료 ✅             검증 완료 ✅      정리            정리            전환
+Phase 1 (완료) → Phase 1.5 (완료) → Phase 2 (완료) → Phase 3-A (완료) → Phase 3-A-2 (완료) → Phase 3-B (완료) → Phase 4 (완료)
+Playwright      구조 변경          테스트·버그 수정    2번째 크롤러      진입점 재사용      실서비스 전략     TypeScript
+전환 ✅         완료 ✅             완료 ✅             검증 완료 ✅      완료 ✅            완료 ✅           완료 ✅
 ```
 
 **순서 결정 이유:**
@@ -201,13 +227,14 @@ Playwright      구조 변경          테스트·버그 수정    2번째 크�
 
 | 항목 | 초기 (crawling.mjs) | 현재 | Phase 1 후 | Phase 1.5 후 | Phase 2 후 | Phase 3-A 후 | Phase 3-B 후 | Phase 4 후 |
 |------|--------------------|------|------------|---------------|------------|--------------|--------------|------------|
-| 파일 수 | 1 | 7 | 7 | 7 | **9** (src 6 + test 3) | **16** (src 10 + test 5 + entry 1) | 측정 예정 | 측정 예정 |
-| 총 줄 수 | 130 | 422 | 434 | 444 | **697** (src 448 + test 249) | **1153** (src 723 + test 430) | 측정 예정 | 측정 예정 |
-| 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | **0** | **0** | 측정 예정 | 측정 예정 |
+| 파일 수 | 1 | 7 | 7 | 7 | **9** (src 6 + test 3) | **16** (src 10 + test 5 + entry 1) | 동일 | **16** (.ts) |
+| 총 줄 수 | 130 | 422 | 434 | 444 | **697** (src 448 + test 249) | **1153** (src 723 + test 430) | 동일 | **1122** (src 710 + test 412) |
+| 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | **0** | **0** | 0 | 0 |
 | delay() 사용 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 타이머 누수 | 있음 | 있음 | **수정 완료** | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 |
-| 중복 키 안정성 | — | 불안정 | 불안정 | 불안정 | **안정 (originalSubtitle)** | **안정 (dedupKey 옵션화)** | 안정 | 안정 |
-| contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | **`{type,text}[]`** | 동일 | 동일 (크롤러별 스키마 분리) | 동일 | 동일 |
-| 진입점 수 | 1 | 1 | 1 | 1 | 1 | **1** (공통 runner + config) | 동일 | 동일 |
-| 테스트 케이스 수 | 0 | 0 | 0 | 0 | **23개** | **31개** (+5 Books +3 Pipeline) | 측정 예정 | 측정 예정 |
-| 테스트 커버리지 | 0% | 0% | 0% | 0% | validate·save·BaseCrawler 100% | +BooksCrawler +runCrawlerPipeline | 측정 예정 | 측정 예정 |
+| 중복 키 안정성 | — | 불안정 | 불안정 | 불안정 | **안정 (originalSubtitle)** | **안정 (dedupKey 옵션화)** | 안정 | 안정 (타입 보장) |
+| contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | **`{type,text}[]`** | 동일 | 동일 (크롤러별 스키마 분리) | 동일 | 동일 (타입 정의) |
+| 진입점 수 | 1 | 1 | 1 | 1 | 1 | **1** (공통 runner + config) | 동일 | **1** (index.ts) |
+| 테스트 케이스 수 | 0 | 0 | 0 | 0 | **23개** | **31개** (+5 Books +3 Pipeline) | 동일 | **31개** (.ts) |
+| 테스트 커버리지 | 0% | 0% | 0% | 0% | validate·save·BaseCrawler 100% | +BooksCrawler +runCrawlerPipeline | 동일 | 동일 + tsc 타입 체크 |
+| 언어 | JS | JS | JS | JS | JS | JS (.mjs/.js) | JS | **TypeScript** |

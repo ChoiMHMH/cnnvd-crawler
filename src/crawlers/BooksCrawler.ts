@@ -1,20 +1,36 @@
-import BaseCrawler from "../core/BaseCrawler.mjs";
+import BaseCrawler from "../core/BaseCrawler.js";
 import { BOOKS_SELECTORS as S } from "../config/booksSelectors.js";
 
 const BASE_URL = "https://books.toscrape.com/";
 const PAGE_COUNT = 2;
 
+export interface BookListItem {
+  title: string;
+  price: string;
+  rating: number;
+  detailUrl: string;
+}
+
+export interface BookDetailItem {
+  title: string;
+  price: string;
+  availability: string;
+  rating: number;
+  description: string;
+  category: string;
+  upc: string;
+  priceExclTax: string;
+  priceInclTax: string;
+  tax: string;
+  stockCount: string;
+}
+
 /**
  * books.toscrape.com 전용 크롤러입니다.
- * BaseCrawler를 상속하여 목록 수집, 상세 페이지 추출을 구현합니다.
  */
 export default class BooksCrawler extends BaseCrawler {
-  /**
-   * 크롤러의 전체 실행 파이프라인입니다.
-   * @returns {Promise<Array<Object>>} 수집된 원시 데이터 배열
-   */
-  async run() {
-    const results = [];
+  async run(): Promise<BookDetailItem[]> {
+    const results: BookDetailItem[] = [];
 
     await this.launch();
     try {
@@ -38,11 +54,9 @@ export default class BooksCrawler extends BaseCrawler {
             console.log(`[수집 완료] 페이지 ${pageIndex} / 항목 ${i + 1}: ${data.title}`);
           }
 
-          // 목록 페이지로 복귀
           await this.navigate(currentUrl, S.BOOK_ITEM);
         }
 
-        // 다음 페이지로 이동
         const nextUrl = await this.getNextPageUrl();
         if (!nextUrl || pageIndex >= PAGE_COUNT) break;
         currentUrl = nextUrl;
@@ -55,14 +69,10 @@ export default class BooksCrawler extends BaseCrawler {
     return results;
   }
 
-  /**
-   * 현재 목록 페이지의 책 목록을 추출합니다.
-   * @returns {Promise<Array<{title: string, price: string, rating: string, detailUrl: string}>>}
-   */
-  async extractList() {
-    return await this.page.evaluate(
+  async extractList(): Promise<BookListItem[]> {
+    return await this.page!.evaluate(
       ({ itemSel, titleSel, priceSel, ratingSel }) => {
-        const ratingMap = { One: 1, Two: 2, Three: 3, Four: 4, Five: 5 };
+        const ratingMap: Record<string, number> = { One: 1, Two: 2, Three: 3, Four: 4, Five: 5 };
 
         return Array.from(document.querySelectorAll(itemSel)).map((el) => {
           const titleEl = el.querySelector(titleSel);
@@ -91,12 +101,8 @@ export default class BooksCrawler extends BaseCrawler {
     );
   }
 
-  /**
-   * 현재 상세 페이지에서 책 데이터를 추출합니다.
-   * @returns {Promise<Object>} 상세 데이터 객체
-   */
-  async extractDetail() {
-    return await this.page.evaluate(
+  async extractDetail(): Promise<BookDetailItem> {
+    return await this.page!.evaluate(
       (selectors) => {
         const title =
           document.querySelector(selectors.DETAIL_TITLE)?.textContent?.trim() ?? "";
@@ -107,13 +113,11 @@ export default class BooksCrawler extends BaseCrawler {
         const description =
           document.querySelector(selectors.DETAIL_DESCRIPTION)?.textContent?.trim() ?? "";
 
-        // 별점
-        const ratingMap = { One: 1, Two: 2, Three: 3, Four: 4, Five: 5 };
+        const ratingMap: Record<string, number> = { One: 1, Two: 2, Three: 3, Four: 4, Five: 5 };
         const ratingEl = document.querySelector(selectors.DETAIL_RATING);
         const ratingWord = ratingEl?.className?.replace("star-rating ", "") ?? "";
         const rating = ratingMap[ratingWord] ?? 0;
 
-        // 카테고리 (breadcrumb에서 추출)
         const breadcrumbLinks = Array.from(
           document.querySelectorAll(selectors.DETAIL_BREADCRUMB + " a"),
         );
@@ -121,8 +125,7 @@ export default class BooksCrawler extends BaseCrawler {
           ? breadcrumbLinks[2]?.textContent?.trim() ?? ""
           : "";
 
-        // 상품 정보 테이블
-        const tableData = {};
+        const tableData: Record<string, string> = {};
         const rows = document.querySelectorAll(selectors.DETAIL_TABLE_ROWS);
         for (const row of rows) {
           const key = row.querySelector("th")?.textContent?.trim();
@@ -156,15 +159,11 @@ export default class BooksCrawler extends BaseCrawler {
     );
   }
 
-  /**
-   * 다음 페이지 URL을 반환합니다. 없으면 null.
-   * @returns {Promise<string|null>}
-   */
-  async getNextPageUrl() {
-    return await this.page.evaluate((nextSel) => {
+  async getNextPageUrl(): Promise<string | null> {
+    return await this.page!.evaluate((nextSel) => {
       const nextEl = document.querySelector(nextSel);
       if (!nextEl) return null;
-      return new URL(nextEl.getAttribute("href"), document.location.href).href;
+      return new URL(nextEl.getAttribute("href")!, document.location.href).href;
     }, S.NEXT_PAGE);
   }
 }

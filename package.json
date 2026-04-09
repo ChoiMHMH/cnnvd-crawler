@@ -2,14 +2,15 @@
   "name": "cnnvd-crawler",
   "version": "1.0.0",
   "description": "",
-  "main": "index.mjs",
+  "main": "index.ts",
   "scripts": {
-    "start": "node index.mjs",
-    "start:cnnvd": "node index.mjs cnnvd",
-    "start:books": "node index.mjs books",
-    "test": "npx vitest run",
-    "test:unit": "npx vitest run",
-    "test:watch": "npx vitest"
+    "start": "tsx index.ts",
+    "start:cnnvd": "tsx index.ts cnnvd",
+    "start:books": "tsx index.ts books",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +22,9 @@
     "playwright": "^1.59.1"
   },
   "devDependencies": {
+    "@types/node": "^25.5.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
     "vitest": "^4.1.3"
   }
 }

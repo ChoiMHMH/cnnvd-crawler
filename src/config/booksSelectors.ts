@@ -19,4 +19,4 @@ export const BOOKS_SELECTORS = {
   DETAIL_TABLE: ".table-striped",
   DETAIL_TABLE_ROWS: ".table-striped tr",
   DETAIL_BREADCRUMB: ".breadcrumb",
-};
+} as const;

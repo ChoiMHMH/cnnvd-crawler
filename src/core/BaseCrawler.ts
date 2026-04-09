@@ -1,4 +1,4 @@
-import { chromium } from "playwright";
+import { chromium, Browser, BrowserContext, Page } from "playwright";
 
 /**
  * 모든 크롤러의 기반이 되는 추상 클래스입니다.
@@ -6,16 +6,14 @@ import { chromium } from "playwright";
  * 공통 인프라 기능을 제공합니다.
  */
 export default class BaseCrawler {
-  constructor() {
-    this.browser = null;
-    this.context = null;
-    this.page = null;
-  }
+  browser: Browser | null = null;
+  context: BrowserContext | null = null;
+  page: Page | null = null;
 
   /**
    * 브라우저를 실행하고 새 페이지를 엽니다.
    */
-  async launch() {
+  async launch(): Promise<void> {
     this.browser = await chromium.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -27,7 +25,7 @@ export default class BaseCrawler {
   /**
    * 브라우저를 종료합니다.
    */
-  async close() {
+  async close(): Promise<void> {
     if (this.browser) {
       await this.browser.close();
       this.browser = null;
@@ -38,33 +36,29 @@ export default class BaseCrawler {
 
   /**
    * 지정한 URL로 이동하고 특정 셀렉터가 나타날 때까지 대기합니다.
-   * @param {string} url - 이동할 URL
-   * @param {string} waitSelector - 로딩 완료 기준 셀렉터
-   * @param {Object} options
-   * @param {number} [options.timeout=60000] - 대기 타임아웃(ms)
    */
-  async navigate(url, waitSelector, { timeout = 60000 } = {}) {
-    await this.page.goto(url, { waitUntil: "networkidle", timeout });
+  async navigate(
+    url: string,
+    waitSelector: string,
+    { timeout = 60000 }: { timeout?: number } = {},
+  ): Promise<void> {
+    await this.page!.goto(url, { waitUntil: "networkidle", timeout });
     if (waitSelector) {
-      await this.page.waitForSelector(waitSelector, { timeout });
+      await this.page!.waitForSelector(waitSelector, { timeout });
     }
   }
 
   /**
    * 주어진 비동기 함수를 최대 times회 재시도합니다.
-   * 각 시도마다 실패 이유를 로깅합니다.
-   * @param {Function} fn - 재시도할 비동기 함수
-   * @param {number} [times=3] - 최대 시도 횟수
-   * @returns {Promise<*>} 함수 반환값
    */
-  async retry(fn, times = 3) {
-    let lastError;
+  async retry<T>(fn: () => Promise<T>, times: number = 3): Promise<T> {
+    let lastError: Error | undefined;
     for (let attempt = 1; attempt <= times; attempt++) {
       try {
         return await fn();
       } catch (error) {
-        lastError = error;
-        console.error(`[retry] 시도 ${attempt}/${times} 실패:`, error.message);
+        lastError = error as Error;
+        console.error(`[retry] 시도 ${attempt}/${times} 실패:`, lastError.message);
       }
     }
     throw new Error(
@@ -74,16 +68,13 @@ export default class BaseCrawler {
 
   /**
    * 주어진 비동기 함수에 타임아웃을 적용합니다.
-   * @param {Function} fn - 실행할 비동기 함수
-   * @param {number} [ms=10000] - 타임아웃(ms)
-   * @returns {Promise<*>} 함수 반환값
    */
-  async withTimeout(fn, ms = 10000) {
-    let timer;
+  async withTimeout<T>(fn: () => Promise<T>, ms: number = 10000): Promise<T> {
+    let timer: ReturnType<typeof setTimeout>;
     try {
       return await Promise.race([
         fn(),
-        new Promise((_, reject) => {
+        new Promise<never>((_, reject) => {
           timer = setTimeout(
             () => reject(new Error(`[withTimeout] ${ms}ms 초과`)),
             ms,
@@ -91,7 +82,7 @@ export default class BaseCrawler {
         }),
       ]);
     } finally {
-      clearTimeout(timer);
+      clearTimeout(timer!);
     }
   }
 }

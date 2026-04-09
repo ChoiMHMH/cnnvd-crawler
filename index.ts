@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { PIPELINES } from "./src/config/pipelineConfigs.js";
-import { runCrawlerPipeline } from "./src/core/runCrawlerPipeline.mjs";
+import { runCrawlerPipeline } from "./src/core/runCrawlerPipeline.js";
 
 const target = process.argv[2] ?? "cnnvd";
 const config = PIPELINES[target];

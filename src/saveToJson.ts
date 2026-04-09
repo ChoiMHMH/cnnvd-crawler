@@ -3,17 +3,19 @@ import path from "path";
 
 const OUTPUT_PATH = path.resolve("output/result.json");
 
+export interface SaveOptions {
+  dedupKey?: (item: Record<string, unknown>) => string | undefined;
+}
+
 /**
  * 번역·검증된 데이터를 JSON 파일에 저장합니다.
- * - dedupKey 함수 기준으로 중복을 방지합니다.
- * - 저장 시 각 항목에 timestamp를 추가합니다.
- * @param {Array<Object>} items - 저장할 데이터 배열
- * @param {string} [outputPath] - 저장 경로 (기본값: output/result.json)
- * @param {Object} [options]
- * @param {Function} [options.dedupKey] - 중복 판별 키 함수
  */
-export async function save(items, outputPath = OUTPUT_PATH, { dedupKey: customDedupKey } = {}) {
-  let existing = [];
+export async function save(
+  items: Record<string, unknown>[],
+  outputPath: string = OUTPUT_PATH,
+  { dedupKey: customDedupKey }: SaveOptions = {},
+): Promise<void> {
+  let existing: Record<string, unknown>[] = [];
   try {
     const raw = await fs.readFile(outputPath, "utf-8");
     existing = JSON.parse(raw);
@@ -21,7 +23,10 @@ export async function save(items, outputPath = OUTPUT_PATH, { dedupKey: customDe
     // 파일이 없거나 파싱 실패 → 새로 시작
   }
 
-  const dedupKey = customDedupKey ?? ((item) => item.originalSubtitle ?? item.detailSubtitle);
+  const dedupKey = customDedupKey ??
+    ((item: Record<string, unknown>) =>
+      (item.originalSubtitle as string | undefined) ?? (item.detailSubtitle as string | undefined));
+
   const existingKeys = new Set(existing.map(dedupKey));
   const timestamp = new Date().toISOString();
   let addedCount = 0;

@@ -1,16 +1,24 @@
-import { validate } from "../validate.js";
+import { validate, type FieldCheck } from "../validate.js";
 import { translate } from "../translate.js";
 import { save } from "../saveToJson.js";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface Runnable {
+  run(): Promise<any[]>;
+  constructor: { name: string };
+}
+
+export interface PipelineConfig {
+  crawler: Runnable;
+  requiredFields?: FieldCheck[];
+  outputPath: string;
+  dedupKey?: (item: Record<string, unknown>) => string | undefined;
+  useTranslate?: boolean;
+}
 
 /**
  * 크롤러 파이프라인을 공통으로 실행합니다.
  * 수집 → 검증 → (번역) → 저장 순서로 진행됩니다.
- * @param {Object} config
- * @param {Object} config.crawler - run()을 구현한 크롤러 인스턴스
- * @param {Array<{field: string, check: string}>} [config.requiredFields] - 검증 필수 필드
- * @param {string} config.outputPath - 저장 경로
- * @param {Function} [config.dedupKey] - 중복 판별 키 함수
- * @param {boolean} [config.useTranslate=false] - 번역 사용 여부
  */
 export async function runCrawlerPipeline({
   crawler,
@@ -18,7 +26,7 @@ export async function runCrawlerPipeline({
   outputPath,
   dedupKey,
   useTranslate = false,
-}) {
+}: PipelineConfig): Promise<void> {
   const label = crawler.constructor.name;
 
   console.log(`[pipeline:${label}] 크롤링 시작`);

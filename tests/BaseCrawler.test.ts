@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import BaseCrawler from "../src/core/BaseCrawler.mjs";
+import BaseCrawler from "../src/core/BaseCrawler.js";
 
 describe("withTimeout", () => {
   it("함수가 시간 내에 완료되면 결과를 반환한다", async () => {

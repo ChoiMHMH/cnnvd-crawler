@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { runCrawlerPipeline } from "../src/core/runCrawlerPipeline.mjs";
+import { runCrawlerPipeline } from "../src/core/runCrawlerPipeline.js";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
@@ -8,12 +8,12 @@ vi.spyOn(console, "log").mockImplementation(() => {});
 
 // translate 모듈 모킹
 vi.mock("../src/translate.js", () => ({
-  translate: vi.fn((items) =>
+  translate: vi.fn((items: Record<string, unknown>[]) =>
     Promise.resolve(items.map((i) => ({ ...i, translated: true }))),
   ),
 }));
 
-let tmpDir;
+let tmpDir: string;
 
 beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "pipeline-test-"));
@@ -23,7 +23,7 @@ afterEach(async () => {
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
 
-function makeFakeCrawler(data) {
+function makeFakeCrawler(data: Record<string, unknown>[]) {
   return {
     constructor: { name: "FakeCrawler" },
     run: vi.fn().mockResolvedValue(data),
@@ -42,7 +42,7 @@ describe("runCrawlerPipeline", () => {
         { field: "price", check: "string" },
       ],
       outputPath,
-      dedupKey: (item) => item.upc,
+      dedupKey: (item) => item.upc as string,
       useTranslate: false,
     });
 
@@ -70,7 +70,7 @@ describe("runCrawlerPipeline", () => {
     const outputPath = path.join(tmpDir, "output.json");
     const items = [
       { title: "Good", price: "£10.00" },
-      { title: "", price: "£10.00" }, // title 빈 값 → 실패
+      { title: "", price: "£10.00" },
     ];
 
     vi.spyOn(console, "warn").mockImplementation(() => {});

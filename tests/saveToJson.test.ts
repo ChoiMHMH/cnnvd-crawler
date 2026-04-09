@@ -6,10 +6,10 @@ import os from "os";
 
 vi.spyOn(console, "log").mockImplementation(() => {});
 
-let tmpDir;
-let outputPath;
+let tmpDir: string;
+let outputPath: string;
 
-function makeItem(subtitle = "发布时间：2026-04-03") {
+function makeItem(subtitle: string = "发布时间：2026-04-03") {
   return {
     detailTitle: "제목",
     detailSubtitle: subtitle,
@@ -28,7 +28,6 @@ afterEach(async () => {
 });
 
 describe("save", () => {
-  // S1: 신규 저장
   it("기존 파일 없을 때 데이터를 저장한다", async () => {
     await save([makeItem("sub1"), makeItem("sub2")], outputPath);
 
@@ -38,7 +37,6 @@ describe("save", () => {
     expect(data[1].detailSubtitle).toBe("sub2");
   });
 
-  // S2: 중복 스킵
   it("기존 파일에 동일 subtitle이 있으면 스킵한다", async () => {
     await save([makeItem("sub1")], outputPath);
     await save([makeItem("sub1"), makeItem("sub2")], outputPath);
@@ -47,7 +45,6 @@ describe("save", () => {
     expect(data).toHaveLength(2);
   });
 
-  // S3: 완전 중복
   it("모든 항목이 이미 존재하면 0건 추가", async () => {
     await save([makeItem("sub1")], outputPath);
     await save([makeItem("sub1")], outputPath);
@@ -56,7 +53,6 @@ describe("save", () => {
     expect(data).toHaveLength(1);
   });
 
-  // S4: output 폴더 없음
   it("output 디렉토리가 없으면 자동 생성한다", async () => {
     const deepPath = path.join(tmpDir, "deep", "nested", "result.json");
     await save([makeItem()], deepPath);
@@ -65,7 +61,6 @@ describe("save", () => {
     expect(data).toHaveLength(1);
   });
 
-  // S5: 기존 파일 JSON 파싱 실패
   it("기존 파일이 손상되면 빈 배열로 초기화 후 저장한다", async () => {
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.writeFile(outputPath, "NOT VALID JSON", "utf-8");
@@ -76,7 +71,6 @@ describe("save", () => {
     expect(data).toHaveLength(1);
   });
 
-  // S6: timestamp 형식
   it("저장 시 ISO 8601 형식의 savedAt을 추가한다", async () => {
     await save([makeItem()], outputPath);
 
@@ -84,7 +78,6 @@ describe("save", () => {
     expect(data[0].savedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
   });
 
-  // S7: 번역 결과가 달라도 originalSubtitle로 중복 감지
   it("번역된 subtitle이 달라도 originalSubtitle이 같으면 중복으로 처리한다", async () => {
     const item1 = { ...makeItem(), detailSubtitle: "게시 시간: 2026-04-03", originalSubtitle: "发布时间：2026-04-03" };
     const item2 = { ...makeItem(), detailSubtitle: "발표 시간: 2026-04-03", originalSubtitle: "发布时间：2026-04-03" };
