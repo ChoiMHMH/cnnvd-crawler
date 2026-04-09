@@ -24,7 +24,7 @@ describe("BooksCrawler.extractList", () => {
     const list = await crawler.extractList();
 
     expect(list).toHaveLength(20);
-  }, 15000);
+  }, 30000);
 
   it("각 항목에 title, price, rating, detailUrl이 있다", async () => {
     await crawler.navigate("https://books.toscrape.com/", "article.product_pod");
@@ -36,7 +36,7 @@ describe("BooksCrawler.extractList", () => {
     expect(first.rating).toBeGreaterThanOrEqual(1);
     expect(first.rating).toBeLessThanOrEqual(5);
     expect(first.detailUrl).toContain("/catalogue/");
-  }, 15000);
+  }, 30000);
 });
 
 describe("BooksCrawler.extractDetail", () => {
@@ -55,7 +55,7 @@ describe("BooksCrawler.extractDetail", () => {
     expect(detail.category).toBe("Poetry");
     expect(detail.upc).toBe("a897fe39b1053632");
     expect(detail.stockCount).toBe("22");
-  }, 15000);
+  }, 30000);
 });
 
 describe("BooksCrawler.getNextPageUrl", () => {
@@ -64,7 +64,7 @@ describe("BooksCrawler.getNextPageUrl", () => {
     const nextUrl = await crawler.getNextPageUrl();
 
     expect(nextUrl).toContain("page-2");
-  }, 15000);
+  }, 30000);
 });
 
 describe("validate with custom requiredFields", () => {

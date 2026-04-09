@@ -32,10 +32,11 @@
 | **Phase 1.5** ✅ | extractDetail 구조 변경 | HTML 문자열 → `{type, text}[]` 구조화 데이터, translate/validate 연쇄 수정 |
 | **Phase 2** ✅ | 테스트 코드 작성 + TDD 버그 수정 | 23개 테스트 (vitest), 버그 3건 수정 (타이머 누수, dedup 키, 셀렉터 범위), CI 통합 |
 | **Phase 3-A** ✅ | BooksCrawler 추가 (BaseCrawler 확장성 검증) | BaseCrawler 수정 0줄로 재사용, 신규 3파일+진입점 1, validate/save 옵션화로 파이프라인 재사용, 테스트 28개 |
+| **Phase 3-A-2** ✅ | 파이프라인 진입점 재사용 구조 정리 | runCrawlerPipeline + pipelineConfigs 도입, 진입점 2→1개, 신규 사이트=크롤러+셀렉터+config 1항목, 테스트 31개 |
 
 ---
 
-## Phase 3 — 두 번째 크롤러 추가 (확장성 실증) ← 현재
+## Phase 3 — 두 번째 크롤러 추가 (확장성 실증)
 
 ### 배경
 
@@ -111,12 +112,21 @@ Playwright headless 브라우저로 Alibaba.com에 접근한 결과:
 - 신규 사이트 추가 비용을 `크롤러 1 + 셀렉터 1 + config 1항목` 수준으로 축소
 
 작업 목록:
-- [ ] `runCrawlerPipeline` 공통 실행 모듈 설계
-- [ ] 사이트별 파이프라인 설정 객체(`pipelineConfigs`) 설계
-- [ ] `index.mjs`를 공통 진입점 구조로 전환
-- [ ] `index.books.mjs` 제거 또는 공통 진입점으로 흡수
-- [ ] 기존 테스트 28개 기준 회귀 여부 확인
-- [ ] before/after 수치 및 변경 범위 기록
+- [x] `runCrawlerPipeline` 공통 실행 모듈 설계
+- [x] 사이트별 파이프라인 설정 객체(`pipelineConfigs`) 설계
+- [x] `index.mjs`를 공통 진입점 구조로 전환
+- [x] `index.books.mjs` 제거 → 공통 진입점으로 흡수
+- [x] 기존 테스트 회귀 확인 + `runCrawlerPipeline` 테스트 3건 추가
+- [x] before/after 수치 및 변경 범위 기록
+
+Phase 3-A-2 실측 결과:
+- 신규 파일 2개: `runCrawlerPipeline.mjs`, `pipelineConfigs.js`
+- 신규 테스트 1개: `runCrawlerPipeline.test.mjs` (3건)
+- 삭제 파일 1개: `index.books.mjs`
+- 수정 파일 2개: `index.mjs` (공통 진입점 전환), `package.json` (스크립트 정리)
+- 진입점 수: 2개 → **1개** (`node index.mjs [target]`)
+- 신규 사이트 추가 비용: 크롤러 1 + 셀렉터 1 + `pipelineConfigs`에 설정 1항목
+- 테스트: 28개 → **31개** (전부 통과)
 
 트레이드오프:
 - 현재 드러난 장애를 수정하는 작업은 아니므로, 지나친 일반화가 되지 않도록 범위를 작게 유지해야 한다.
@@ -191,12 +201,13 @@ Playwright      구조 변경          테스트·버그 수정    2번째 크�
 
 | 항목 | 초기 (crawling.mjs) | 현재 | Phase 1 후 | Phase 1.5 후 | Phase 2 후 | Phase 3-A 후 | Phase 3-B 후 | Phase 4 후 |
 |------|--------------------|------|------------|---------------|------------|--------------|--------------|------------|
-| 파일 수 | 1 | 7 | 7 | 7 | **9** (src 6 + test 3) | **14** (src 8 + test 4 + entry 2) | 측정 예정 | 측정 예정 |
-| 총 줄 수 | 130 | 422 | 434 | 444 | **697** (src 448 + test 249) | **995** (src 654 + test 341) | 측정 예정 | 측정 예정 |
+| 파일 수 | 1 | 7 | 7 | 7 | **9** (src 6 + test 3) | **16** (src 10 + test 5 + entry 1) | 측정 예정 | 측정 예정 |
+| 총 줄 수 | 130 | 422 | 434 | 444 | **697** (src 448 + test 249) | **1153** (src 723 + test 430) | 측정 예정 | 측정 예정 |
 | 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | **0** | **0** | 측정 예정 | 측정 예정 |
 | delay() 사용 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 타이머 누수 | 있음 | 있음 | **수정 완료** | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 |
 | 중복 키 안정성 | — | 불안정 | 불안정 | 불안정 | **안정 (originalSubtitle)** | **안정 (dedupKey 옵션화)** | 안정 | 안정 |
 | contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | **`{type,text}[]`** | 동일 | 동일 (크롤러별 스키마 분리) | 동일 | 동일 |
-| 테스트 케이스 수 | 0 | 0 | 0 | 0 | **23개** | **28개** (+5 BooksCrawler) | 측정 예정 | 측정 예정 |
-| 테스트 커버리지 | 0% | 0% | 0% | 0% | validate·save·BaseCrawler 100% | +BooksCrawler extractList/extractDetail | 측정 예정 | 측정 예정 |
+| 진입점 수 | 1 | 1 | 1 | 1 | 1 | **1** (공통 runner + config) | 동일 | 동일 |
+| 테스트 케이스 수 | 0 | 0 | 0 | 0 | **23개** | **31개** (+5 Books +3 Pipeline) | 측정 예정 | 측정 예정 |
+| 테스트 커버리지 | 0% | 0% | 0% | 0% | validate·save·BaseCrawler 100% | +BooksCrawler +runCrawlerPipeline | 측정 예정 | 측정 예정 |
