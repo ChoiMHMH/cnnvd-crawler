@@ -41,12 +41,12 @@ function extractProductId(): string {
 }
 
 function extractTitle(): string {
-  const el = document.querySelector(S.TITLE) ?? document.querySelector(S.TITLE_FALLBACK);
+  const el = document.querySelector(S.TITLE);
   return el?.textContent?.trim() ?? "";
 }
 
 function extractPriceInfo(): { price: string; originalPrice?: string; discount?: string } {
-  const priceEl = document.querySelector(S.PRICE) ?? document.querySelector(S.PRICE_FALLBACK);
+  const priceEl = document.querySelector(S.PRICE);
   const price = priceEl?.textContent?.trim() ?? "";
 
   const origEl = document.querySelector(S.ORIGINAL_PRICE);
@@ -59,7 +59,7 @@ function extractPriceInfo(): { price: string; originalPrice?: string; discount?:
 }
 
 function extractCurrency(): string {
-  const priceEl = document.querySelector(S.PRICE) ?? document.querySelector(S.PRICE_FALLBACK);
+  const priceEl = document.querySelector(S.PRICE);
   const text = priceEl?.textContent?.trim() ?? "";
 
   if (text.includes("₩")) return "KRW";
@@ -152,7 +152,7 @@ function extractDescription(): string {
 }
 
 function extractSeller(): SellerInfo {
-  const nameEl = document.querySelector(S.SELLER_NAME) ?? document.querySelector(S.SELLER_NAME_FALLBACK);
+  const nameEl = document.querySelector(S.SELLER_NAME);
   const linkEl = document.querySelector<HTMLAnchorElement>(S.STORE_LINK);
 
   return {

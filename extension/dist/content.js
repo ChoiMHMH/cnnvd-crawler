@@ -1,41 +1,39 @@
 (function() {
   "use strict";
   const ALI_SELECTORS = {
-    // 상품 기본 정보
-    TITLE: "h1[data-pl='product-title']",
-    TITLE_FALLBACK: ".product-title-text",
-    // 가격
-    PRICE: "[class*='Price_price__']",
-    PRICE_FALLBACK: ".product-price-value",
-    ORIGINAL_PRICE: "[class*='Price_origPrice__']",
-    DISCOUNT: "[class*='Price_discount__']",
+    // 상품 기본 정보 — h1은 클래스가 빈 문자열
+    TITLE: "h1",
+    // 가격 (한국 로케일 기준 price-kr 네임스페이스)
+    PRICE: "[class*='price-kr--current--']",
+    ORIGINAL_PRICE: "[class*='price-kr--originWrap--']",
+    DISCOUNT: "[class*='price-kr--discount--']",
     // 이미지
-    IMAGE_THUMBS: ".slider--img--D7MJNPZ img, .image-view--previewList--TfHRXTh img",
-    MAIN_IMAGE: ".magnifier--image--EYYoMth, .image-view--previewImg--W3BoPz",
+    IMAGE_THUMBS: "[class*='slider--img--'] img",
+    MAIN_IMAGE: "[class*='magnifier--image--']",
     // 옵션/SKU
-    OPTION_GROUP: "[class*='sku-item--skuItem--']",
+    OPTION_GROUP: "[class*='sku-item--wrap--']",
     OPTION_GROUP_TITLE: "[class*='sku-item--title--']",
-    OPTION_ITEM: "[class*='sku-item--skuValueItem--']",
+    OPTION_ITEM: "[class*='sku-item--box--'] > div, [class*='sku-item--image--']",
     OPTION_ITEM_IMAGE: "img",
-    OPTION_ITEM_TEXT: "[class*='sku-item--text--']",
+    OPTION_ITEM_TEXT: "[class*='sku-item--text--'], [class*='sku-item--name--']",
     // 속성/스펙
     ATTRIBUTE_LIST: "[class*='specification--list--']",
     ATTRIBUTE_ITEM: "[class*='specification--prop--']",
     ATTRIBUTE_TITLE: "[class*='specification--title--']",
     ATTRIBUTE_DESC: "[class*='specification--desc--']",
     // 판매자 정보
-    SELLER_NAME: "[class*='store-header--storeName--']",
-    SELLER_NAME_FALLBACK: ".shop-name a",
-    STORE_LINK: "[class*='store-header--storeName--'] a",
+    SELLER_NAME: "[class*='store-header--storeName--'], [class*='seller--storeName--']",
+    STORE_LINK: "[class*='store-header--storeName--'] a, [class*='seller--storeName--'] a",
     // 평점/리뷰
-    RATING: "[class*='review--average--']",
-    REVIEW_COUNT: "[class*='review--count--']",
-    ORDER_COUNT: "[class*='review--trade--']",
+    RATING: "[class*='reviewer--rating--'], [class*='review--average--']",
+    REVIEW_COUNT: "[class*='reviewer--reviews--'], [class*='review--count--']",
+    ORDER_COUNT: "[class*='reviewer--sold--'], [class*='review--trade--']",
     // 배송
-    SHIPPING: "[class*='dynamic-shipping--content--']",
+    SHIPPING: "[class*='dynamic-shipping--content--'], [class*='shipping--content--']",
     // 카테고리 (breadcrumb)
-    BREADCRUMB: "[class*='breadcrumb--item--'] a",
-    DESCRIPTION_TEXT: "#product-description"
+    BREADCRUMB: "[class*='breadcrumb--item--'] a, [class*='breadcrumb--text--'] a",
+    // 설명
+    DESCRIPTION_TEXT: "#product-description, [class*='description--content--']"
   };
   function parseProductPage() {
     return {
@@ -64,11 +62,11 @@
     return canonicalMatch?.[1] ?? "";
   }
   function extractTitle() {
-    const el = document.querySelector(ALI_SELECTORS.TITLE) ?? document.querySelector(ALI_SELECTORS.TITLE_FALLBACK);
+    const el = document.querySelector(ALI_SELECTORS.TITLE);
     return el?.textContent?.trim() ?? "";
   }
   function extractPriceInfo() {
-    const priceEl = document.querySelector(ALI_SELECTORS.PRICE) ?? document.querySelector(ALI_SELECTORS.PRICE_FALLBACK);
+    const priceEl = document.querySelector(ALI_SELECTORS.PRICE);
     const price = priceEl?.textContent?.trim() ?? "";
     const origEl = document.querySelector(ALI_SELECTORS.ORIGINAL_PRICE);
     const originalPrice = origEl?.textContent?.trim() || void 0;
@@ -77,7 +75,7 @@
     return { price, originalPrice, discount };
   }
   function extractCurrency() {
-    const priceEl = document.querySelector(ALI_SELECTORS.PRICE) ?? document.querySelector(ALI_SELECTORS.PRICE_FALLBACK);
+    const priceEl = document.querySelector(ALI_SELECTORS.PRICE);
     const text = priceEl?.textContent?.trim() ?? "";
     if (text.includes("₩")) return "KRW";
     if (text.includes("$")) return "USD";
@@ -152,7 +150,7 @@
     return descEl?.textContent?.trim() ?? "";
   }
   function extractSeller() {
-    const nameEl = document.querySelector(ALI_SELECTORS.SELLER_NAME) ?? document.querySelector(ALI_SELECTORS.SELLER_NAME_FALLBACK);
+    const nameEl = document.querySelector(ALI_SELECTORS.SELLER_NAME);
     const linkEl = document.querySelector(ALI_SELECTORS.STORE_LINK);
     return {
       name: nameEl?.textContent?.trim() ?? "",
