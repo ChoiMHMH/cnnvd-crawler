@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "AliExpress Product Scraper",
+  "version": "1.0.0",
+  "description": "AliExpress 상품 페이지에서 정규화된 상품 데이터를 추출하여 로컬 서버로 전송합니다.",
+  "permissions": ["offscreen", "activeTab"],
+  "host_permissions": [
+    "http://localhost:3500/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.aliexpress.com/item/*.html*",
+        "https://ko.aliexpress.com/item/*.html*",
+        "https://aliexpress.com/item/*.html*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

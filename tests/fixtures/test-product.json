@@ -1,0 +1,19 @@
+{
+  "productId": "1005006999999999",
+  "title": "Test Wireless Earbuds",
+  "price": "15900",
+  "originalPrice": "29900",
+  "discount": "-47%",
+  "currency": "KRW",
+  "imageUrls": ["https://ae01.alicdn.com/test.jpg"],
+  "attributes": [{"name": "Brand", "value": "TestBrand"}],
+  "optionGroups": [{"name": "Color", "options": [{"name": "Black"}, {"name": "White"}]}],
+  "stockKeepingUnits": [],
+  "description": "Test product description",
+  "seller": {"name": "TestStore", "storeUrl": "https://aliexpress.com/store/12345"},
+  "ratings": {"average": "4.8", "totalReviews": "2456"},
+  "shipping": "Free Shipping",
+  "category": ["Electronics", "Audio"],
+  "sourceUrl": "https://www.aliexpress.com/item/1005006999999999.html",
+  "scrapedAt": "2026-04-10T12:00:00.000Z"
+}

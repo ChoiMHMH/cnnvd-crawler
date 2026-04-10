@@ -7,6 +7,7 @@
     "start": "tsx index.ts",
     "start:cnnvd": "tsx index.ts cnnvd",
     "start:books": "tsx index.ts books",
+    "start:server": "tsx src/server.ts",
     "build": "tsc",
     "test": "vitest run",
     "test:unit": "vitest run",
@@ -19,10 +20,13 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
     "dotenv": "^17.4.1",
+    "express": "^5.2.1",
     "playwright": "^1.59.1"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^25.5.2",
+    "jsdom": "^29.0.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vitest": "^4.1.3"

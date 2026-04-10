@@ -35,7 +35,7 @@
 | **Phase 3-A-2** ✅ | 파이프라인 진입점 재사용 구조 정리 | runCrawlerPipeline + pipelineConfigs 도입, 진입점 2→1개, 신규 사이트=크롤러+셀렉터+config 1항목, 테스트 31개 |
 | **Phase 3-B** ✅ | 실서비스 접근 전략 정리 | 1688 불가, Alibaba 과잉, AliExpress Affiliate API 채택, 하이브리드 패턴 설계, 전략 문서화 |
 | **Phase 4** ✅ | TypeScript 전환 | 전 파일 .ts 전환, tsc --noEmit 통과, Runnable/PipelineConfig 등 인터페이스 명시, 테스트 31개 유지 |
-| **Phase 5** | 확장프로그램 기반 상품 데이터 파싱 엔진 PoC | 진행 예정 |
+| **Phase 5** ✅ | 확장프로그램 기반 상품 데이터 파싱 엔진 PoC | Manifest V3 + Offscreen 패턴, TS+Vite 빌드, AliExpressProduct 스키마, validate/save 수정 0줄 재사용, 테스트 64개 |
 
 ---
 
@@ -85,34 +85,71 @@ Phase 3-B에서 이커머스 실서비스의 headless 크롤링 한계를 확인
 2. 추출된 데이터를 로컬 수신 서버를 통해 기존 validate → translate → saveToJson 파이프라인에 연결한다
 3. 파서의 추출 정확도와 파이프라인 재사용률을 수치로 기록한다
 
+### 기술 결정 로그
+
+#### 결정 1: Service Worker vs Offscreen Document
+
+| | Service Worker | Offscreen Document |
+|---|---|---|
+| **수명** | 비활성 30초 후 종료 | 명시적으로 닫을 때까지 유지 |
+| **DOM** | **없음** (document, DOMParser 불가) | **있음** (DOMParser로 HTML 파싱 가능) |
+| **네트워크** | fetch 가능하지만 수명 제한 | 장시간 fetch, WebSocket 유지 가능 |
+| **용도** | 이벤트 리스닝, 짧은 작업 | HTML 파싱, 장시간 네트워크, 미디어 처리 |
+
+**결정: Offscreen Document 패턴 채택**
+
+윈들리 분석에서 모든 네트워크 상호작용이 service worker가 아닌 `offscreen.html`에서 발생했다. 핵심 이유는 **Service Worker에 DOM API가 없기 때문**이다. 윈들리의 scrap 응답이 단순 HTML이 아닌 정규화된 상품 객체였다는 것은, 어딘가에서 HTML → DOM 파싱 → 구조화 변환이 일어났다는 뜻이다. 이 작업은 `DOMParser`가 필요하므로 DOM이 존재하는 offscreen document에서 수행할 수밖에 없다.
+
+구조:
+- **content script**: 현재 페이지 DOM에서 직접 상품 데이터 파싱 (우리 PoC 방식)
+- **background service worker**: content script ↔ offscreen 메시지 중계
+- **offscreen document**: 로컬 서버로 POST 전송 + 장시간 파이프라인 실행 가능
+
+> 참고: 윈들리는 offscreen 내부에서 fetch한 HTML을 DOMParser로 파싱하는 방식일 가능성이 높다 (content script 없이 offscreen만으로 scrap 수행). 우리 PoC에서는 content script에서 현재 페이지 DOM을 직접 파싱하되, 로컬 서버 전송은 offscreen에서 처리한다.
+
+#### 결정 2: 확장프로그램 언어 — JS vs TS + 빌드
+
+| 방식 | 장점 | 단점 |
+|------|------|------|
+| JS (빌드 없음) | 즉시 Chrome 로드 가능 | Phase 4 TS 전환 취지 불일치, 타입 공유 불가 |
+| **TS + Vite 빌드** | 프로젝트 일관성, AliExpressProduct 인터페이스 서버와 공유 | 빌드 스텝 필요 |
+
+**결정: TS + Vite 빌드 채택**
+
+- 프로젝트에 이미 Vitest(Vite 기반) 사용 중이므로 의존성이 자연스러움
+- 실무에서도 Chrome 확장프로그램은 TS + 번들러(webpack/vite)가 주류
+- content script는 모듈 import가 제한되므로 번들러로 단일 파일 출력이 표준
+
 ### 작업 목록
 
-#### 5-1. 확장프로그램 구현 (Manifest V3)
-- [ ] `manifest.json` 작성 (permissions, content_scripts, background service worker)
-- [ ] content script: AliExpress 상품 상세 페이지에서 DOM 파싱
+#### 5-1. 확장프로그램 구현 (Manifest V3 + Offscreen)
+- [x] `manifest.json` 작성 (permissions, content_scripts, offscreen)
+- [x] content script (TS): AliExpress 상품 상세 페이지 DOM에서 파싱
   - 추출 대상: productId, title, price, images, attributes, options/SKU, description
-- [ ] background service worker: content script에서 받은 데이터를 로컬 서버로 POST
-- [ ] 개발자 모드 로드로 동작 확인
+- [x] offscreen document (TS): content script에서 받은 데이터를 로컬 서버로 POST
+- [x] background service worker (TS): content script ↔ offscreen 메시지 중계
+- [x] Vite 빌드 설정 (TS → 번들 JS, `extension/dist/` 출력)
+- [x] 개발자 모드 로드로 동작 확인
 
 #### 5-2. 로컬 수신 서버
-- [ ] Express 기반 간단한 수신 서버 (POST /product 엔드포인트)
-- [ ] 수신 데이터 → 기존 validate → translate → saveToJson 연결
-- [ ] 상품 스키마 타입 정의 (AliExpressProduct 인터페이스)
+- [x] Express 기반 간단한 수신 서버 (POST /product 엔드포인트)
+- [x] 수신 데이터 → 기존 validate → saveToJson 연결 (translate는 useTranslate=false로 스킵)
+- [x] 상품 스키마 타입 정의 (AliExpressProduct 인터페이스, 확장프로그램과 공유)
 
 #### 5-3. 테스트
-- [ ] 파서 단위 테스트: HTML fixture → 스키마 변환 정확도 검증
-- [ ] 파이프라인 통합 테스트: 확장프로그램 출력 → validate → save 흐름
-- [ ] before/after 수치 기록
+- [x] 파서 단위 테스트: HTML fixture → 스키마 변환 정확도 검증 (21개)
+- [x] 파이프라인 통합 테스트: 확장프로그램 출력 → validate → save 흐름 (12개)
+- [x] before/after 수치 기록
 
-### 측정 항목
+### 측정 결과
 
-| 항목 | 측정 방법 |
-|------|-----------|
-| 파싱 정확도 | 수동 확인 상품 데이터 vs 파서 출력 필드별 일치율 |
-| 추출 필드 수 | 정규화된 스키마에 포함된 필드 개수 |
-| 기존 파이프라인 재사용률 | validate/translate/save 중 수정 없이 재사용한 모듈 수 |
-| 신규 코드 vs 재사용 코드 | 확장프로그램 신규 줄 수 vs 기존 파이프라인 재사용 줄 수 |
-| headless 대비 접근 성공률 | Phase 3-B에서 차단된 사이트가 확장프로그램에서 접근되는지 |
+| 항목 | 측정 방법 | 결과 |
+|------|-----------|------|
+| 파싱 정확도 | HTML fixture 기반 21개 단위 테스트 | 전 필드 추출 확인 (fixture 기준 100%) |
+| 추출 필드 수 | AliExpressProduct 인터페이스 필드 | **17개** (productId, title, price, originalPrice, discount, currency, imageUrls, attributes, optionGroups, stockKeepingUnits, description, seller, ratings, shipping, category, sourceUrl, scrapedAt) |
+| 기존 파이프라인 재사용률 | validate/save 모듈 수정 없이 재사용 | **2/2 = 100%** (translate는 미사용이므로 해당 없음) |
+| 신규 코드 vs 재사용 코드 | extension 458줄 + server 58줄 (신규) vs validate+save 111줄 (재사용) | 신규 516줄, 재사용 111줄 |
+| headless 대비 접근 성공률 | 확장프로그램은 실제 브라우저 컨텍스트에서 동작 | 봇 탐지 우회 (구조적으로 차단 대상이 아님) |
 
 ### 트레이드오프
 
@@ -134,9 +171,9 @@ Phase 3-B에서 이커머스 실서비스의 headless 크롤링 한계를 확인
 ## 작업 순서 요약
 
 ```
-Phase 1 (완료) → Phase 1.5 (완료) → Phase 2 (완료) → Phase 3-A (완료) → Phase 3-A-2 (완료) → Phase 3-B (완료) → Phase 4 (완료) → Phase 5 (진행 예정)
+Phase 1 (완료) → Phase 1.5 (완료) → Phase 2 (완료) → Phase 3-A (완료) → Phase 3-A-2 (완료) → Phase 3-B (완료) → Phase 4 (완료) → Phase 5 (완료)
 Playwright      구조 변경          테스트·버그 수정    2번째 크롤러      진입점 재사용      실서비스 전략     TypeScript        확장프로그램
-전환 ✅         완료 ✅             완료 ✅             검증 완료 ✅      완료 ✅            완료 ✅           완료 ✅            파싱 엔진 PoC
+전환 ✅         완료 ✅             완료 ✅             검증 완료 ✅      완료 ✅            완료 ✅           완료 ✅            파싱 엔진 PoC ✅
 ```
 
 **순서 결정 이유:**
@@ -158,15 +195,15 @@ Playwright      구조 변경          테스트·버그 수정    2번째 크�
 
 | 항목 | 초기 (crawling.mjs) | 현재 | Phase 1 후 | Phase 1.5 후 | Phase 2 후 | Phase 3-A 후 | Phase 3-B 후 | Phase 4 후 | Phase 5 후 |
 |------|--------------------|------|------------|---------------|------------|--------------|--------------|------------|------------|
-| 파일 수 | 1 | 7 | 7 | 7 | **9** (src 6 + test 3) | **16** (src 10 + test 5 + entry 1) | 동일 | **16** (.ts) | 예정 |
-| 총 줄 수 | 130 | 422 | 434 | 444 | **697** (src 448 + test 249) | **1153** (src 723 + test 430) | 동일 | **1122** (src 710 + test 412) | 예정 |
-| 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | **0** | **0** | 0 | 0 | 0 |
+| 파일 수 | 1 | 7 | 7 | 7 | **9** (src 6 + test 3) | **16** (src 10 + test 5 + entry 1) | 동일 | **16** (.ts) | **24** (src 11 + ext 6 + test 7) |
+| 총 줄 수 | 130 | 422 | 434 | 444 | **697** (src 448 + test 249) | **1153** (src 723 + test 430) | 동일 | **1122** (src 710 + test 412) | **2004** (src 783 + ext 458 + test 763) |
+| 하드코딩 셀렉터 | 9 | 1 | 1 | 1 | **0** | **0** | 0 | 0 | **0** (ext 셀렉터도 분리 파일) |
 | delay() 사용 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 타이머 누수 | 있음 | 있음 | **수정 완료** | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 | 수정 완료 |
-| 중복 키 안정성 | — | 불안정 | 불안정 | 불안정 | **안정 (originalSubtitle)** | **안정 (dedupKey 옵션화)** | 안정 | 안정 (타입 보장) | 예정 |
-| contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | **`{type,text}[]`** | 동일 | 동일 (크롤러별 스키마 분리) | 동일 | 동일 (타입 정의) | 예정 |
-| 진입점 수 | 1 | 1 | 1 | 1 | 1 | **1** (공통 runner + config) | 동일 | **1** (index.ts) | 예정 |
-| 테스트 케이스 수 | 0 | 0 | 0 | 0 | **23개** | **31개** (+5 Books +3 Pipeline) | 동일 | **31개** (.ts) | 예정 |
-| 테스트 커버리지 | 0% | 0% | 0% | 0% | validate·save·BaseCrawler 100% | +BooksCrawler +runCrawlerPipeline | 동일 | 동일 + tsc 타입 체크 | 예정 |
-| 언어 | JS | JS | JS | JS | JS | JS (.mjs/.js) | JS | **TypeScript** | TypeScript |
-| 수집 소스 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | 예정 (+ 확장프로그램) |
+| 중복 키 안정성 | — | 불안정 | 불안정 | 불안정 | **안정 (originalSubtitle)** | **안정 (dedupKey 옵션화)** | 안정 | 안정 (타입 보장) | **안정 (productId 기반)** |
+| contents 구조 | HTML 문자열 | HTML 문자열 | HTML 문자열 | **`{type,text}[]`** | 동일 | 동일 (크롤러별 스키마 분리) | 동일 | 동일 (타입 정의) | 동일 + AliExpressProduct 스키마 |
+| 진입점 수 | 1 | 1 | 1 | 1 | 1 | **1** (공통 runner + config) | 동일 | **1** (index.ts) | **2** (index.ts + server.ts) |
+| 테스트 케이스 수 | 0 | 0 | 0 | 0 | **23개** | **31개** (+5 Books +3 Pipeline) | 동일 | **31개** (.ts) | **64개** (+21 Parser +12 Server) |
+| 테스트 커버리지 | 0% | 0% | 0% | 0% | validate·save·BaseCrawler 100% | +BooksCrawler +runCrawlerPipeline | 동일 | 동일 + tsc 타입 체크 | +parser +server 파이프라인 |
+| 언어 | JS | JS | JS | JS | JS | JS (.mjs/.js) | JS | **TypeScript** | **TypeScript** (ext도 TS+Vite) |
+| 수집 소스 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | 서버 크롤링 | **서버 크롤링 + 확장프로그램** |

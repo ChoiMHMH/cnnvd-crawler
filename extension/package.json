@@ -1,0 +1,15 @@
+{
+  "name": "aliexpress-scraper-extension",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "vite build --watch"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.304",
+    "typescript": "^6.0.2",
+    "vite": "^6.3.4"
+  }
+}
