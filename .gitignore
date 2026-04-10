@@ -1,5 +1,6 @@
 node_modules/
 .env
+dist/
 output/*.json
 !output/result.json
 JOB_TARGET.md

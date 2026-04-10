@@ -33,7 +33,7 @@ jobs:
       - name: 크롤링 실행
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: node index.mjs
+        run: npm run start:cnnvd
 
       - name: 결과 파일 커밋
         uses: stefanzweifel/git-auto-commit-action@v6

@@ -1,159 +1,384 @@
-# CNNVD Crawler
+# 상품 데이터 수집 파이프라인 리팩토링
 
-중국 국가정보보안취약성데이터베이스(CNNVD)의 보안 경고를 자동으로 수집하고,
-Claude AI로 번역하여 JSON으로 저장하는 크롤링 파이프라인입니다.
+단일 크롤링 스크립트를 **TypeScript 기반의 재사용 가능한 수집 파이프라인**으로 리팩토링하고, 실제 이커머스 차단 환경에서는 **확장프로그램 기반 상품 파서**로 접근 방식을 전환한 프로젝트입니다.
 
----
+이 프로젝트에서 집중한 문제는 단순히 “페이지를 긁어오기”가 아니라 아래 4가지였습니다.
 
-## 파이프라인 구조
+- 반복적으로 만들어지는 스크래퍼의 **공통 로직을 어떻게 추상화할 것인가**
+- 상품 데이터를 **검증 가능한 스키마**로 어떻게 정리할 것인가
+- 차단·CAPTCHA·동적 DOM 같은 현실적인 제약에서 **운영 가능한 수집 전략**을 어떻게 고를 것인가
+- 기존 크롤러를 버리지 않고, **확장 가능한 구조**로 어떻게 바꿀 것인가
 
-```
-수집 (CnnvdCrawler)
-  → 검증 (validate)
-    → 번역 (translate / Claude API)
-      → 저장 (saveToJson / output/result.json)
-```
-
-| 단계 | 모듈 | 역할 |
-|------|------|------|
-| 수집 | `src/crawlers/CnnvdCrawler.mjs` | Puppeteer로 목록 및 상세 페이지 크롤링 |
-| 검증 | `src/validate.js` | 필수 필드 빈값 체크, 불량 데이터 스킵 |
-| 번역 | `src/translate.js` | Claude Haiku API로 중→한 번역 |
-| 저장 | `src/saveToJson.js` | 중복 방지 후 JSON 파일 저장 |
+> 이 README는 공개 포트폴리오 기준으로 작성했습니다. 실서비스 대응 여부는 과장하지 않고, 구현한 범위와 검증한 범위를 구분해서 설명합니다.
 
 ---
 
-## 도구 선택 이유
+## 이 프로젝트가 보여주는 것
 
-### Puppeteer 채택 이유
+### 1) 레거시 크롤러를 파이프라인 구조로 분리한 경험
 
-| 도구 | 탈락 이유 |
-|------|-----------|
-| **Cheerio** | 정적 HTML 파싱 전용 — CNNVD는 Vue 기반 SPA라 JS 실행 불가 |
-| **Selenium** | Python 기반이라 Next.js 프로젝트와 언어가 분리되어 유지보수 부담 |
-| **Playwright** | 멀티브라우저 지원 등 기능은 우수하나, 처음 크롤러를 만드는 시점에서 Puppeteer가 레퍼런스와 커뮤니티가 더 풍부해 학습 비용 기준으로 Puppeteer 선택 |
-| **Puppeteer** | Chrome DevTools Protocol 직접 사용, Node.js 네이티브, 경량 |
+초기 코드는 브라우저 제어, 파싱, 번역, 저장이 한 흐름에 섞여 있었습니다. 이를 아래 구조로 분리했습니다.
+
+```text
+수집 → 검증 → 번역(선택) → 저장
+```
+
+핵심은 “파일을 나눴다”가 아니라, **새 수집 대상이 들어와도 공통 계층을 재사용할 수 있는 구조**를 만들었다는 점입니다.
+
+### 2) 상품 데이터 수집 관점의 구조화 경험
+
+실제 이커머스 도메인을 기준으로 상품명, 가격, 이미지, 옵션, 속성, 판매자, 평점, 카테고리 같은 필드를 **정규화된 객체 스키마**로 수집하도록 설계했습니다.
+
+### 3) 차단 환경에서의 판단
+
+1688, Alibaba, AliExpress 같은 실제 소싱처를 검토하면서, headless 브라우저 기반 자동 수집만으로는 안정적인 운영이 어렵다는 점을 확인했습니다. 여기서 무리한 우회 코드를 추가하기보다 다음 우선순위로 접근했습니다.
+
+- 가능하면 **공식 API / Affiliate API 우선 검토**
+- 서버 크롤링이 부적합하면 **실사용자 브라우저 컨텍스트 기반 확장프로그램 PoC**로 보완
+- 수집 이후의 검증/저장 계층은 기존 파이프라인을 그대로 재사용
+
+### 4) 테스트 가능한 구조로 바꾼 경험
+
+검증, 저장, 파서, 서버 연결, 파이프라인 실행 흐름을 테스트 대상으로 분리해, 리팩토링 이후에도 핵심 동작이 유지되는지 확인할 수 있도록 만들었습니다.
 
 ---
 
-## 실제 실행 결과 (2026-04-07)
+## 문제 배경
 
-```
-[pipeline] 크롤링 시작
-[수집 완료] 페이지 1 / 항목 1 ~ 10
-[수집 완료] 페이지 2 / 항목 1 ~ 10
-[pipeline] 수집 완료 — 20건
-[validate] 검증 완료 — 성공 8건 / 실패 12건 (빈 본문 항목 스킵)
-[pipeline] 검증 완료 — 8건
-[pipeline] 번역 완료 — 8건  ← 크레딧 충전 시 한국어 번역 자동 적용
-[save] 저장 완료 — 신규 4건 추가, 중복 4건 스킵 → output/result.json
-[pipeline] 파이프라인 완료
-```
+처음에는 중국 국가정보보안취약성데이터베이스(CNNVD)의 보안 경고를 수집하고, 번역 후 JSON으로 저장하는 단일 크롤러를 개선하는 작업으로 시작했습니다.
 
-| 단계 | 수치 | 비고 |
-|------|------|------|
-| 수집 | **20건** | 2페이지 × 10건 |
-| 검증 통과 | **8건** | 12건은 본문 없는 항목 → 정상 스킵 |
-| 번역 | **8건** | Claude Haiku API (크레딧 충전 시 한국어 변환) |
-| 신규 저장 | **4건** | 나머지 4건은 중복 스킵 (재실행 안전) |
+기존 구조의 문제는 명확했습니다.
+
+- 브라우저 제어와 데이터 처리 로직이 강하게 결합되어 있음
+- 사이트가 바뀌면 재사용 가능한 계층이 거의 없음
+- 검증 없이 후속 단계로 넘어가 데이터 품질 관리가 어려움
+- 저장 방식과 중복 처리 기준이 코드 흐름에 섞여 있음
+
+이 문제를 해결하기 위해, **사이트별 파싱 로직**과 **공통 인프라 계층**을 분리하는 리팩토링을 진행했습니다.
 
 ---
 
-## Before / After 개선사항
+## 진행한 작업
 
-| 항목 | Before | After | 개선 |
-|------|--------|-------|------|
-| 하드코딩 셀렉터 수 | **9개** | **0개** | 100% 감소 → `selectors.js` 1곳 관리 |
-| `delay()` 사용 횟수 | **1회** | **0회** | `waitForSelector`로 대체 |
-| SPA 로딩 전략 | **networkidle0** (타임아웃 발생) | **networkidle2** | Vue SPA 안정 대응 |
-| 재시도 로직 | 없음 | **retry(fn, 3)** | 일시적 네트워크 오류 흡수 |
-| 타임아웃 처리 | 없음 | **withTimeout()** | 무한 대기 방지 |
-| 데이터 검증 레이어 | 없음 | **validate.js** | 불량 데이터 번역 API 도달 차단 |
-| 중복 방지 | 없음 | **subtitle 기준** | 재실행해도 데이터 오염 없음 |
-| 번역 API | 자체 handler | **Claude Haiku** | 표준 SDK, 실패 시 원문 반환 |
-| GitHub Actions 자동화 | 없음 | **주간 스케줄** | 무인 운영 가능 |
-| 모듈 파일 수 | **1개** | **6개** | 관심사 분리, 단일 책임 원칙 |
-| 평균 함수 길이 | **~14줄** | **~10줄** | 단순화 |
+## 1. Playwright 기반 공통 크롤링 인프라로 전환
+
+기존 단일 스크립트 구조를 `BaseCrawler` 중심 구조로 재편했습니다.
+
+### 공통화한 책임
+
+- 브라우저 생명주기 관리
+- 페이지 이동 및 로딩 대기
+- 재시도 로직
+- 타임아웃 제어
+
+### 분리한 결과
+
+- 사이트별 크롤러는 “무엇을 파싱할지”에 집중
+- 공통 인프라는 “어떻게 안정적으로 브라우저를 제어할지”에 집중
+
+```text
+BaseCrawler
+├── launch / close
+├── navigate
+├── retry
+└── withTimeout
+
+SiteCrawler
+├── run
+├── extractList / extractDetail
+└── site-specific selectors
+```
+
+---
+
+## 2. 수집 이후 단계를 파이프라인으로 분리
+
+수집한 데이터가 바로 저장되지 않도록, `runCrawlerPipeline`에서 공통 흐름을 관리하도록 만들었습니다.
+
+```ts
+runCrawlerPipeline({
+  crawler,
+  requiredFields,
+  outputPath,
+  dedupKey,
+  useTranslate,
+})
+```
+
+이 파이프라인은 아래 순서로 동작합니다.
+
+```text
+crawler.run()
+  → validate()
+  → translate()   // 선택
+  → save()
+```
+
+이렇게 분리한 이유는 다음과 같습니다.
+
+- **검증 규칙 변경**이 파싱 코드 변경으로 이어지지 않게 하기 위해
+- **저장 전략 변경**이 크롤러 수정으로 번지지 않게 하기 위해
+- 사이트마다 다른 **중복 기준(dedupKey)** 을 독립적으로 적용하기 위해
+
+---
+
+## 3. 새 수집 대상 추가 비용을 낮추는 구조 검증
+
+`books.toscrape.com` 크롤러를 추가해, 새 사이트를 붙일 때 공통 계층을 재사용할 수 있는지 확인했습니다.
+
+이 단계는 “실서비스 이커머스 수집 성공 사례”를 만들기 위한 목적이 아니라, 아래를 검증하기 위한 단계였습니다.
+
+- 새 크롤러를 추가할 때 공통 인프라를 다시 쓰는가
+- 사이트별 셀렉터와 파서만 분리해 붙일 수 있는가
+- 수집 이후 검증/저장 흐름을 동일하게 재사용할 수 있는가
+
+즉, 이 프로젝트의 강점은 **사이트 하나를 더 긁었다는 것**보다 **새 사이트를 붙일 수 있는 구조를 만들었다는 것**에 있습니다.
+
+---
+
+## 4. 실제 이커머스 환경 검토와 접근 전략 전환
+
+실제 구매대행/소싱 도메인에 가까운 환경을 보기 위해 1688, Alibaba, AliExpress를 검토했습니다.
+
+| 대상 | 관찰 결과 | 판단 |
+|------|-----------|------|
+| 1688 | 검색 페이지가 `punish` 페이지로 리다이렉트 | 직접 headless 크롤링 부적합 |
+| Alibaba | 검색/상세 진입 시 CAPTCHA 차단 | 직접 headless 크롤링 부적합 |
+| AliExpress | 상품 상세 DOM 기반 파싱은 가능, 공식/제휴 API도 검토 가치 있음 | 하이브리드 접근 후보 |
+
+여기서 중요한 건 “막혔지만 더 세게 우회하면 된다”가 아니라, **운영 가능한 구조를 어떻게 선택할지 판단했다**는 점입니다.
+
+검토한 대안은 아래와 같습니다.
+
+| 접근 방식 | 장점 | 한계 | 판단 |
+|-----------|------|------|------|
+| Headless + 우회 코드 | 기존 구조를 유지하기 쉬움 | 약관/운영 안정성/유지보수 리스크 큼 | 제외 |
+| 외부 SaaS/API | 빠르게 붙일 수 있음 | 비용과 의존성 발생 | 보류 |
+| 공식 API / Affiliate API | 비교적 안정적 | 범위, 심사, 쿼터 제한 가능 | 우선 검토 |
+| 확장프로그램 기반 수집 | 실제 사용자 브라우저 컨텍스트 활용 가능 | 대량 자동 수집에는 부적합 | PoC 채택 |
+
+---
+
+## 5. Chrome 확장프로그램 기반 상품 파서 PoC 구현
+
+AliExpress 상품 상세 페이지를 대상으로 **실사용자 브라우저 컨텍스트에서 동작하는 확장프로그램 PoC**를 만들었습니다.
+
+전체 흐름은 아래와 같습니다.
+
+```text
+AliExpress 상품 상세 페이지
+  → content script: DOM 파싱
+  → background service worker: 메시지 중계
+  → offscreen document: 로컬 서버 전송
+  → Express server: validate → save
+```
+
+이 구조의 핵심은 **수집 방식은 바뀌어도 검증/저장 파이프라인은 유지**된다는 점입니다.
+
+즉, 서버 크롤러와 확장프로그램 기반 수집이 완전히 다른 시스템처럼 흩어지지 않고, 뒤쪽 데이터 처리 계층은 재사용할 수 있도록 설계했습니다.
+
+---
+
+## 아키텍처
+
+```text
+cnnvd-crawler/
+├── src/
+│   ├── core/
+│   │   ├── BaseCrawler.ts
+│   │   └── runCrawlerPipeline.ts
+│   ├── crawlers/
+│   │   ├── CnnvdCrawler.ts
+│   │   └── BooksCrawler.ts
+│   ├── config/
+│   │   ├── selectors.ts
+│   │   ├── booksSelectors.ts
+│   │   └── pipelineConfigs.ts
+│   ├── validate.ts
+│   ├── translate.ts
+│   ├── saveToJson.ts
+│   └── server.ts
+├── extension/
+│   ├── src/
+│   │   ├── parser.ts
+│   │   ├── content.ts
+│   │   ├── background.ts
+│   │   ├── offscreen.ts
+│   │   ├── selectors.ts
+│   │   └── types.ts
+│   └── public/
+├── tests/
+├── docs/
+└── index.ts
+```
+
+---
+
+## 수집 데이터 스키마
+
+AliExpress 상품 상세 페이지 PoC는 아래 형태로 데이터를 정규화합니다.
+
+```ts
+interface AliExpressProduct {
+  productId: string;
+  title: string;
+  price: string;
+  originalPrice?: string;
+  discount?: string;
+  currency: string;
+  imageUrls: string[];
+  attributes: ProductAttribute[];
+  optionGroups: OptionGroup[];
+  stockKeepingUnits: StockKeepingUnit[];
+  description: string;
+  seller: SellerInfo;
+  ratings: RatingInfo;
+  shipping: string;
+  category: string[];
+  sourceUrl: string;
+  scrapedAt: string;
+}
+```
+
+저장 단계에서는 상품 ID 기준으로 중복 저장을 방지합니다.
+
+```ts
+dedupKey: (item) => item.productId
+```
+
+이 구조는 상품명, 가격, 옵션, 이미지, 판매자, 평점, 카테고리 등 **이커머스 상품 데이터 수집 포지션과 직접 연결되는 필드 중심**으로 설계했습니다.
+
+---
+
+## 테스트
+
+현재 테스트는 크게 두 종류입니다.
+
+### 단위 테스트
+
+- `validate`: 필수 필드 누락, 빈 문자열, 빈 배열 검증
+- `saveToJson`: 중복 제거, 디렉터리 생성, 손상된 JSON 처리
+- `runCrawlerPipeline`: 수집 → 검증 → 번역 → 저장 흐름 검증
+- `parser`: AliExpress fixture HTML을 정규화된 상품 객체로 변환하는지 검증
+- `server`: 확장프로그램에서 전송한 데이터를 기존 저장 파이프라인에 연결하는지 검증
+
+### 브라우저 기반 테스트
+
+- `BaseCrawler`
+- `BooksCrawler`
+
+브라우저 실행이 제한되는 환경에서는 브라우저 없는 테스트만 먼저 실행할 수 있습니다.
+
+```bash
+npx vitest run --pool=threads --maxWorkers=1 --exclude tests/BooksCrawler.test.ts
+```
+
+타입 체크:
+
+```bash
+npx tsc --noEmit
+cd extension
+npx tsc --noEmit
+```
 
 ---
 
 ## 실행 방법
 
-### 1. 설치
+## 1. 설치
 
 ```bash
-git clone https://github.com/<your-github-id>/cnnvd-crawler.git
-cd cnnvd-crawler
 npm install
-npx puppeteer browsers install chrome
+npx playwright install chromium
 ```
 
-### 2. 환경변수 설정
+확장프로그램도 빌드하려면:
 
 ```bash
-cp .env.example .env
-# .env 파일을 열어 ANTHROPIC_API_KEY 값을 입력하세요
+cd extension
+npm install
+npm run build
 ```
 
-### 3. 실행
+---
+
+## 2. CNNVD 파이프라인 실행
 
 ```bash
-node index.mjs
-```
-
-결과는 `output/result.json`에 저장됩니다.
-
----
-
-## 환경변수
-
-| 변수명 | 필수 | 설명 |
-|--------|------|------|
-| `ANTHROPIC_API_KEY` | ✅ | Claude API 키 ([발급](https://console.anthropic.com)) |
-
----
-
-## GitHub Actions 자동화
-
-`.github/workflows/schedule.yml`에 정의된 워크플로우가
-**매주 일요일 00:00 UTC**에 자동으로 크롤링을 실행합니다.
-
-### 설정 방법
-
-1. GitHub 레포 → Settings → Secrets and variables → Actions
-2. `ANTHROPIC_API_KEY` 시크릿 추가
-3. Actions 탭에서 `workflow_dispatch`로 수동 실행 테스트
-
-### 워크플로우 흐름
-
-```
-트리거 (cron / 수동)
-  → ubuntu-latest 환경 준비
-    → npm ci + Chrome 설치
-      → node index.mjs 실행
-        → output/result.json 자동 커밋
+npm run start:cnnvd
 ```
 
 ---
 
-## 프로젝트 구조
+## 3. 구조 검증용 Books 크롤러 실행
 
+```bash
+npm run start:books
 ```
-cnnvd-crawler/
-├── src/
-│   ├── core/
-│   │   └── BaseCrawler.mjs     # 브라우저 생명주기, 재시도, 타임아웃
-│   ├── crawlers/
-│   │   └── CnnvdCrawler.mjs    # CNNVD 전용 크롤링 로직
-│   ├── config/
-│   │   └── selectors.js        # CSS 셀렉터 상수 모음
-│   ├── translate.js            # Claude API 번역
-│   ├── validate.js             # 데이터 검증
-│   └── saveToJson.js           # JSON 저장 + 중복 방지
-├── output/
-│   └── result.json             # 크롤링 결과
-├── index.mjs                   # 파이프라인 진입점
-├── .env.example                # 환경변수 예시
-└── .github/workflows/
-    └── schedule.yml            # 주간 자동화
+
+---
+
+## 4. AliExpress 확장프로그램 PoC 실행
+
+먼저 로컬 서버를 실행합니다.
+
+```bash
+npm run start:server
 ```
+
+그다음 Chrome 개발자 모드에서 `extension/dist`를 로드하고 AliExpress 상품 상세 페이지에 진입하면, content script가 DOM을 파싱해 로컬 서버로 전송합니다.
+
+---
+
+## 기술적으로 특히 신경 쓴 지점
+
+### 공통 로직과 사이트별 로직의 경계
+
+크롤러가 많아질수록 중요한 건 기능 하나를 빨리 만드는 것보다, **어디까지 공통화하고 어디서부터 사이트별 로직으로 남길지** 정하는 일이라고 생각했습니다.
+
+이 프로젝트에서는 아래 기준으로 나눴습니다.
+
+- 공통화 대상: 브라우저 제어, 재시도, 타임아웃, 검증, 저장, 실행 파이프라인
+- 사이트별 유지 대상: 셀렉터, 상세 파싱 규칙, 데이터 스키마 차이
+
+### 데이터 품질 관리
+
+수집 자체보다 중요한 건 **잘못된 데이터가 뒤 단계로 흘러가지 않게 하는 것**이라고 봤습니다. 그래서 검증 레이어를 별도로 두고, 필수 필드 누락 시 저장 이전에 걸러지도록 만들었습니다.
+
+### 장애 대응 관점
+
+차단, CAPTCHA, DOM 구조 변경 같은 문제는 “기술적으로 할 수 있는가”와 “운영 가능한가”가 다르다고 생각합니다. 그래서 이 프로젝트에서는 과한 우회보다 **유지보수 가능성과 운영 리스크**를 기준으로 접근 전략을 선택했습니다.
+
+---
+
+## 한계
+
+이 프로젝트는 강점을 분명히 가지지만, 동시에 한계도 분명합니다.
+
+- 확장프로그램 방식은 사용자가 상품 상세 페이지에 직접 진입해야 하므로 대량 자동 수집에는 적합하지 않습니다.
+- AliExpress DOM 구조가 바뀌면 셀렉터와 파서를 함께 수정해야 합니다.
+- `stockKeepingUnits`는 현재 스키마만 열어두었고, PoC에서는 빈 배열로 유지합니다.
+- 실서비스 이커머스 수집은 “운영 완료”보다 “제약 분석 + 구조 설계 + PoC 검증” 비중이 더 큽니다.
+
+이 부분은 약점이라기보다, **실제 제약을 과장하지 않고 드러낸 상태에서 어떤 구조와 판단을 했는지 보여주는 지점**이라고 생각합니다.
+
+---
+
+## 회고
+
+이 프로젝트를 하면서 가장 크게 배운 점은, 크롤링은 단순 자동화가 아니라 **구조화와 판단의 문제**라는 것이었습니다.
+
+- 스크래퍼가 늘어날수록 공통 인프라가 중요해지고
+- 사이트가 바뀔수록 셀렉터와 파서의 변경 비용을 줄이는 구조가 중요해지고
+- 차단 환경에서는 “수집 성공”보다 “운영 가능한 전략”이 더 중요해집니다.
+
+그래서 이 프로젝트는 “한 번 돌아가는 스크립트”를 만드는 데서 끝나지 않고, **반복적으로 유지보수할 수 있는 수집 구조를 만드는 방향**으로 발전시킨 작업입니다.
+
+---
+
+## 관련 문서
+
+- `docs/ARCHITECTURE.md`: 아키텍처 설계 배경
+- `docs/PLAN.md`: 작업 계획 및 진행 기록
+- `docs/ecommerce-access-strategy.md`: 이커머스 접근 전략 검토
+
