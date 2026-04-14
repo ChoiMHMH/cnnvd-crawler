@@ -1,9 +1,10 @@
 # 재사용 가능한 데이터 수집 파이프라인 리팩토링
 
-> 기존 단일 스크립트 기반 CNNVD 크롤러를 TypeScript + Playwright 기반 파이프라인으로 리팩토링한 프로젝트입니다.  
-> 공통 브라우저 인프라, 검증/저장 파이프라인, 확장프로그램 기반 PoC까지 연결해 **새 수집 소스를 붙일 수 있는 구조**를 검증했습니다.
+ 기존 단일 스크립트 기반 CNNVD 크롤러를 TypeScript + Playwright 기반 파이프라인으로 리팩토링한 프로젝트입니다.  
+ 공통 브라우저 인프라, 검증/저장 파이프라인, 확장프로그램 기반 PoC를 연결해 **새 수집 소스를 붙일 수 있는 구조**를 검증했습니다.
+ 
+<img width="1536" height="859" alt="크롤러 bofore-after 1" src="https://github.com/user-attachments/assets/49530dfb-ed48-4d86-975a-9b1907d1d02c" />
 
-<img width="1536" height="1024" alt="크롤러 bofore-after" src="https://github.com/user-attachments/assets/a67e4295-ed89-4d7c-844b-61b23b41f502" />
 
 ## 한눈에 보기
 
@@ -34,6 +35,8 @@
 
 ### 2. runCrawlerPipeline
 수집 결과를 바로 저장하지 않고, 공통 파이프라인에서 처리합니다.
+<img width="1536" height="469" alt="공통 파이프라인 1" src="https://github.com/user-attachments/assets/5b629929-f944-4744-8dd1-adadd6bf516d" />
+
 
 ```text
 crawler.run()
@@ -44,21 +47,21 @@ crawler.run()
 
 ### 3. 설정 기반 확장
 사이트별 차이는 crawler + selectors + pipelineConfig 로 분리했습니다.
-<!-- [이미지 2 삽입: 수집 소스별 공통 파이프라인 다이어그램] -->
 
-### 실제 이커머스 환경에서의 판단
+
+## 실제 이커머스 환경에서의 판단
 이 프로젝트는 실서비스 이커머스 운영 완성본이 아니라, 구조와 접근 전략을 검증한 PoC입니다.
 - books.toscrape.com은 실서비스 증명이 아니라 구조 확장성 검증용 통제 사이트
-- 1688 / Alibaba는 headless 접근에서 차단·CAPTCHA 확인
-- 무리한 우회보다 API 우선 / 보완 수집 분리 전략이 현실적이라고 판단
+- 1688 , Alibaba는 headless 접근에서 차단, CAPTCHA 확인
+- 무리한 우회보다 API 우선, 보완 수집 분리 전략이 현실적이라고 판단
 - AliExpress 상세 페이지는 Chrome Extension 기반 PoC로 보완 수집 흐름 검증
 
-### 검증 결과
+## 검증 결과
 - TypeScript build 통과
 - 루트 타입 체크 통과
 - 확장프로그램 타입 체크 통과
-- Vitest 64개 중 59개 통과 (나머지 5개는 Playwright 브라우저가 현재 샌드박스 환경에서 spawn EPERM으로 막힌 영향입니다.)
-
+- Vitest 7개 파일 / 64개 테스트 전부 통과
+> parser test는 기존에 jsdom 환경에서 Node 전용 fs/path import와 충돌해 suite 로딩 문제가 있었고, fixture를 Vite ?raw import로 전환해 해결했습니다.
 
 ### 실행
 ```
