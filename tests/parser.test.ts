@@ -2,19 +2,17 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeAll } from "vitest";
-import fs from "fs";
-import path from "path";
 
 // parser.ts는 document를 직접 사용하므로 jsdom 환경에서 테스트한다.
 // 단, parser는 extension/src에 있으므로 상대 경로로 import 한다.
 import { parseProductPage } from "../extension/src/parser.js";
-
-const FIXTURE_PATH = path.resolve(__dirname, "fixtures/aliexpress-product.html");
+// Vite의 ?raw import로 HTML fixture를 문자열로 로드한다.
+// jsdom 환경에서 node:fs를 직접 쓰면 브라우저 externalize 때문에 실패한다.
+import fixtureHtml from "./fixtures/aliexpress-product.html?raw";
 
 describe("AliExpress parser", () => {
   beforeAll(() => {
-    const html = fs.readFileSync(FIXTURE_PATH, "utf-8");
-    document.documentElement.innerHTML = html;
+    document.documentElement.innerHTML = fixtureHtml;
 
     // jsdom에서 location을 AliExpress URL로 설정
     Object.defineProperty(window, "location", {
