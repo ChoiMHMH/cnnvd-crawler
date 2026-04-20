@@ -49,7 +49,7 @@ Phase 3-B에서 이커머스 실서비스의 headless 크롤링 한계를 확인
 - Alibaba: CAPTCHA 차단
 - stealth/프록시 우회는 약관 위반으로 채택하지 않음
 
-이후 실제 이커머스 수집 서비스(윈들리)의 네트워크 흐름을 DevTools로 분석한 결과, 다른 접근 구조를 발견했다:
+이후 실제 이커머스 수집 서비스의 네트워크 흐름을 DevTools로 분석한 결과, 다른 접근 구조를 발견했다:
 
 | 관찰 항목 | 내용 |
 |-----------|------|
@@ -75,7 +75,7 @@ Phase 3-B에서 이커머스 실서비스의 headless 크롤링 한계를 확인
 | C. headless + stealth 강화 | 기존 구조 유지 | 약관 위반, 불안정, 공개 레포 부적합 | **탈락** |
 
 대안 A 채택 이유:
-- 윈들리 분석에서 확인한 구조를 직접 PoC로 검증할 수 있다
+- 네트워크 흐름 분석에서 확인한 구조를 직접 PoC로 검증할 수 있다
 - 기존 파이프라인(validate → translate → save) 재사용 여부를 실측할 수 있다
 - 대량 수집 한계는 인정하되, "대량은 API, 개별 상세는 확장프로그램"이라는 하이브리드 구조로 설명 가능
 
@@ -98,14 +98,14 @@ Phase 3-B에서 이커머스 실서비스의 headless 크롤링 한계를 확인
 
 **결정: Offscreen Document 패턴 채택**
 
-윈들리 분석에서 모든 네트워크 상호작용이 service worker가 아닌 `offscreen.html`에서 발생했다. 핵심 이유는 **Service Worker에 DOM API가 없기 때문**이다. 윈들리의 scrap 응답이 단순 HTML이 아닌 정규화된 상품 객체였다는 것은, 어딘가에서 HTML → DOM 파싱 → 구조화 변환이 일어났다는 뜻이다. 이 작업은 `DOMParser`가 필요하므로 DOM이 존재하는 offscreen document에서 수행할 수밖에 없다.
+레퍼런스 분석에서 모든 네트워크 상호작용이 service worker가 아닌 `offscreen.html`에서 발생했다. 핵심 이유는 **Service Worker에 DOM API가 없기 때문**이다. scrap 응답이 단순 HTML이 아닌 정규화된 상품 객체였다는 것은, 어딘가에서 HTML → DOM 파싱 → 구조화 변환이 일어났다는 뜻이다. 이 작업은 `DOMParser`가 필요하므로 DOM이 존재하는 offscreen document에서 수행할 수밖에 없다.
 
 구조:
 - **content script**: 현재 페이지 DOM에서 직접 상품 데이터 파싱 (우리 PoC 방식)
 - **background service worker**: content script ↔ offscreen 메시지 중계
 - **offscreen document**: 로컬 서버로 POST 전송 + 장시간 파이프라인 실행 가능
 
-> 참고: 윈들리는 offscreen 내부에서 fetch한 HTML을 DOMParser로 파싱하는 방식일 가능성이 높다 (content script 없이 offscreen만으로 scrap 수행). 우리 PoC에서는 content script에서 현재 페이지 DOM을 직접 파싱하되, 로컬 서버 전송은 offscreen에서 처리한다.
+> 참고: 레퍼런스 서비스는 offscreen 내부에서 fetch한 HTML을 DOMParser로 파싱하는 방식일 가능성이 높다 (content script 없이 offscreen만으로 scrap 수행). 우리 PoC에서는 content script에서 현재 페이지 DOM을 직접 파싱하되, 로컬 서버 전송은 offscreen에서 처리한다.
 
 #### 결정 2: 확장프로그램 언어 — JS vs TS + 빌드
 
