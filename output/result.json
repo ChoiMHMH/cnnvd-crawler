@@ -63,5 +63,269 @@
     ],
     "table": "",
     "savedAt": "2026-04-12T12:12:33.336Z"
+  },
+  {
+    "detailTitle": "【漏洞通报】CNNVD关于微软多个安全漏洞的通报",
+    "detailSubtitle": "发布时间：2026-06-11 16:55:43",
+    "originalSubtitle": "发布时间：2026-06-11 16:55:43",
+    "contents": [
+      {
+        "type": "paragraph",
+        "text": "CNNVD关于微软多个安全漏洞的通报 近日，微软官方发布了多个安全漏洞的公告，全部为影响微软产品本身的漏洞，共211个。微软Microsoft Windows、Microsoft Windows Media、Microsoft Windows BitLocker、Microsoft Azure Kubernetes Service等多个产品和系统受漏洞影响。目前，微软官方已经发布了漏洞修复补丁，建议用户及时确认是否受到漏洞影响，尽快采取修补措施。"
+      },
+      {
+        "type": "heading",
+        "text": "一、 漏洞介绍"
+      },
+      {
+        "type": "paragraph",
+        "text": "2026年6月9日，微软发布了2026年6月份安全更新，共211个漏洞的补丁程序，CNNVD对这些漏洞进行了收录。本次更新主要涵盖了Microsoft Windows、Microsoft Windows Media、Microsoft Windows BitLocker、Microsoft Azure Kubernetes Service、Microsoft Kinect、Microsoft Azure Stack Edge等。CNNVD对其危害等级进行了评价，其中超危漏洞4个，高危漏洞54个，中危漏洞153个。微软多个产品和系统版本受漏洞影响，具体影响范围可访问微软官方网站查询： https://portal.msrc.microsoft.com/zh-cn/security-guidance"
+      },
+      {
+        "type": "heading",
+        "text": "二、漏洞详情"
+      },
+      {
+        "type": "paragraph",
+        "text": "此次更新共211个漏洞的补丁程序，包括200个新增漏洞的补丁程序和11个更新漏洞的补丁程序。 此次更新共包括200个新增漏洞的补丁程序，其中超危漏洞4个，高危漏洞48个，中危漏洞148个。"
+      }
+    ],
+    "table": "序号 + 漏洞名称 + CNNVD编号 + CVE编号 + 危害等级 + 官方链接 + 1 + Microsoft HTTP.sys 安全漏洞 + CNNVD-202606-2189 + CVE-2026-47291 + 超危 + https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-47291 + 2 + Microsoft Windows Kernel 安全漏洞 + CNNVD-202606-2199 + CVE-2026-45657 + 超危 + https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-45657 + 3 + Microsoft Windows DHCP Server 安全漏洞 + CNNVD-202606-2230 + CVE-2026-45602 + 超危 + https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-45602 + 4 + Microsoft Windows DHCP Server 安全漏洞 + CNNVD-202606-2289 + CVE-2026-44815 + 超危 + https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-44815 + 5 + Microsoft PC Manager 访问控制错误漏洞 + CNNVD-202606-2053 + CVE-2026-50512 + 高危 + https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-50512 + 6 + Microsoft PC Manager 后置链接漏洞 + CNNVD-202606-2054 + CVE-2026-50511 + 高危 + https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-50511 + 7 + Microsoft Windows Secure Boot 安全漏洞 + CNNVD-202606-2104 + CVE-2026-48576 + 高危 + https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-48576 + 8 + Microsoft Windows Kernel 资源管理错误漏洞 + CNNVD-202606-2105 + CVE-2026-48583 + 高危 + https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-48583 + 9 + Microsoft HTTP.sys 资源管理错误漏洞 + CNNVD-202606-2107 + CVE-2026-49160 + 高危 + https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-49160 + 10 + Microsoft Windows Media 安全漏洞 + CNNVD-202606-2108 + CVE-2026-48574 + 高危 + https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-48574",
+    "savedAt": "2026-09-06T03:41:38.304Z"
+  },
+  {
+    "detailTitle": "【漏洞通报】CNNVD关于Google Chrome安全漏洞的通报",
+    "detailSubtitle": "发布时间：2026-06-10 16:12:40",
+    "originalSubtitle": "发布时间：2026-06-10 16:12:40",
+    "contents": [
+      {
+        "type": "paragraph",
+        "text": "近日，国家信息安全漏洞库（CNNVD）收到关于Google Chrome安全漏洞（CNNVD-202606-1877、CVE-2026-11645）情况的报送。成功利用漏洞的攻击者可实现远程代码执行，进而控制目标设备。Google Chrome多个版本均受此漏洞影响。目前，谷歌官方已发布新版本修复了漏洞，建议用户及时确认产品版本，尽快采取修补措施。"
+      },
+      {
+        "type": "heading",
+        "text": "一、漏洞介绍"
+      },
+      {
+        "type": "paragraph",
+        "text": "Google Chrome是美国谷歌（Google）公司的一款Web浏览器。Google Chrome存在一个安全漏洞，攻击者可通过构造恶意网页触发漏洞，进而绕过沙箱防护实现远程代码执行。"
+      },
+      {
+        "type": "heading",
+        "text": "二、危害影响"
+      },
+      {
+        "type": "paragraph",
+        "text": "Google Chrome(Linux) 149.0.7827.102之前版本、Google Chrome(Windows) 149.0.7827.102之前版本、Google Chrome (Mac) 149.0.7827.103之前版本均受此漏洞影响。"
+      },
+      {
+        "type": "heading",
+        "text": "三、修复建议"
+      },
+      {
+        "type": "paragraph",
+        "text": "目前，谷歌官方已发布新版本修复了漏洞，建议用户及时确认产品版本，尽快采取修补措施。官方升级链接如下： https://www.google.cn/chrome/ 本通报由CNNVD技术支撑单位——奇安信网神信息技术（北京）股份有限公司、三六零数字安全科技集团有限公司、南京禾盾信息科技有限公司、杭州迪普科技股份有限公司、湖南智榜样教育科技有限公司、广州非凡信息安全技术有限公司、深信服科技股份有限公司、南京聚铭网络科技有限公司等技术支撑单位提供支持。 CNNVD将继续跟踪上述漏洞的相关情况，及时发布相关信息。如有需要，可与CNNVD联系。联系方式: cnnvd@itsec.gov.cn"
+      }
+    ],
+    "table": "",
+    "savedAt": "2026-09-06T03:41:38.304Z"
+  },
+  {
+    "detailTitle": "【漏洞通报】人工智能重要安全漏洞通报-OpenClaw多个安全漏洞",
+    "detailSubtitle": "发布时间：2026-05-20 14:27:51",
+    "originalSubtitle": "发布时间：2026-05-20 14:27:51",
+    "contents": [
+      {
+        "type": "heading",
+        "text": "人工智能重要安全漏洞的通报"
+      },
+      {
+        "type": "heading",
+        "text": "OpenClaw多个安全漏洞"
+      },
+      {
+        "type": "paragraph",
+        "text": "根据国家信息安全漏洞库（CNNVD）统计，自2026年4月29日-2026年5月17日，共采集OpenClaw漏洞69个，其中超危漏洞7个、高危漏洞33个，中危漏洞27个、低危漏洞2个，包含了访问控制错误、代码问题、路径遍历等多个漏洞类型。OpenClaw多个版本受到漏洞影响。目前，OpenClaw官方已经发布了更新修复漏洞，建议用户及时确认是否受到漏洞影响，尽快采取修补措施。"
+      },
+      {
+        "type": "heading",
+        "text": "一、 漏洞介绍"
+      },
+      {
+        "type": "paragraph",
+        "text": "OpenClaw是一个开源的智能人工助理，可运行在PC或服务器等多种终端设备上，能够直接通过微信、Telegram、Discord、Slack、iMessage等聊天平台接收指令并执行操作。OpenClaw拥有大量用户群体，影响范围涉及多个行业和领域，攻击者利用漏洞可在未授权状态下获取目标敏感数据，提升权限、或远程执行代码。OpenClaw 2026.5.19之前多个版本均受到漏洞影响。"
+      },
+      {
+        "type": "heading",
+        "text": "二、漏洞详情"
+      },
+      {
+        "type": "paragraph",
+        "text": "自2026年4月29日-2026年5月17日，国家信息安全漏洞库（CNNVD）共采集OpenClaw漏洞69个，其中超危漏洞7个、高危漏洞33个、中危漏洞27个、低危漏洞2个。参考链接：https://github.com/openclaw/openclaw/releases"
+      }
+    ],
+    "table": "序号 + 漏洞名称 + CNNVD编号 + CVE编号 + 危害等级 + 漏洞类型 + 1 + Crabbox 代码注入漏洞 + CNNVD-202605-3404 + CVE-2026-8634 + 超危 + 代码注入 + 2 + OpenClaw 安全漏洞 + CNNVD-202605-917 + CVE-2026-44109 + 超危 + 其他 + 3 + OpenClaw 安全漏洞 + CNNVD-202605-920 + CVE-2026-43581 + 超危 + 其他 + 4 + OpenClaw 安全漏洞 + CNNVD-202605-924 + CVE-2026-43578 + 超危 + 其他 + 5 + OpenClaw 安全漏洞 + CNNVD-202605-927 + CVE-2026-43575 + 超危 + 其他 + 6 + OpenClaw 安全漏洞 + CNNVD-202605-679 + CVE-2026-43566 + 超危 + 其他 + 7 + OpenClaw 数据伪造问题漏洞 + CNNVD-202605-682 + CVE-2026-43534 + 超危 + 数据伪造问题 + 8 + Crabbox 安全漏洞 + CNNVD-202605-3408 + CVE-2026-8629 + 高危 + 其他 + 9 + Crabbox 授权问题漏洞 + CNNVD-202605-3429 + CVE-2026-8621 + 高危 + 授权问题 + 10 + OpenClaw 代码问题漏洞 + CNNVD-202605-909 + CVE-2026-44116 + 高危 + 代码问题",
+    "savedAt": "2026-09-06T03:41:38.304Z"
+  },
+  {
+    "detailTitle": "【漏洞通报】CNNVD关于Palo Alto Networks PAN-OS 安全漏洞的通报",
+    "detailSubtitle": "发布时间：2026-05-07 18:31:24",
+    "originalSubtitle": "发布时间：2026-05-07 18:31:24",
+    "contents": [
+      {
+        "type": "paragraph",
+        "text": "近日，国家信息安全漏洞库（CNNVD）收到关于Palo Alto Networks PAN-OS安全漏洞（CNNVD-202605-940、CVE-2026-0300）情况的报送。攻击者可通过向目标防火墙发送特制的数据包，触发缓冲区溢出，从而在目标设备上执行任意代码。PAN-OS多个版本均受此漏洞影响。目前，Palo Alto Networks官方已发布新版本修复了该漏洞，建议用户及时确认产品版本，尽快采取修补措施。"
+      },
+      {
+        "type": "heading",
+        "text": "一、漏洞介绍"
+      },
+      {
+        "type": "paragraph",
+        "text": "Palo Alto Networks PAN-OS是美国Palo Alto Networks公司的一套为其防火墙设备开发的操作系统。该漏洞源于 User-ID Authentication Portal 服务在处理特定数据包时的边界检查不足。未经身份认证的攻击者可通过向目标防火墙的User-ID Authentication Portal服务发送特制的数据包，触发缓冲区溢出，从而在目标设备上以 root 权限执行任意代码。"
+      },
+      {
+        "type": "heading",
+        "text": "二、危害影响"
+      },
+      {
+        "type": "paragraph",
+        "text": "PAN-OS 12.1 < 12.1.4-h5、PAN-OS 12.1 < 12.1.7、PAN-OS 11.2 < 11.2.4-h17、PAN-OS 11.2 < 11.2.7-h13、PAN-OS 11.2 < 11.2.10-h6、PAN-OS 11.2 < 11.2.12、PAN-OS 11.1 < 11.1.4-h33、PAN-OS 11.1 < 11.1.6-h32、PAN-OS 11.1 < 11.1.7-h6、PAN-OS 11.1 < 11.1.10-h25、PAN-OS 11.1 < 11.1.13-h5、PAN-OS 11.1 < 11.1.15、PAN-OS 10.2 < 10.2.7-h34、PAN-OS 10.2 < 10.2.10-h36、PAN-OS 10.2 < 10.2.13-h21、PAN-OS 10.2 < 10.2.16-h7、PAN-OS 10.2 < 10.2.18-h6等版本均受此漏洞影响。"
+      },
+      {
+        "type": "heading",
+        "text": "三、修复建议"
+      },
+      {
+        "type": "paragraph",
+        "text": "目前，Palo Alto Networks官方已发布新版本修复了该漏洞，建议用户及时确认产品版本，尽快采取修补措施。官方参考链接： https://security.paloaltonetworks.com/CVE-2026-0300 本通报由CNNVD技术支撑单位——奇安信网神信息技术（北京）股份有限公司、上海戎磐网络科技有限公司、广东南方信息安全研究院、贵州粟字科技有限公司、北方实验室（沈阳）股份有限公司、深圳市魔方安全科技有限公司等技术支撑单位提供支持。 CNNVD将继续跟踪上述漏洞的相关情况，及时发布相关信息。如有需要，可与CNNVD联系。联系方式: cnnvd@itsec.gov.cn"
+      }
+    ],
+    "table": "",
+    "savedAt": "2026-09-06T03:41:38.304Z"
+  },
+  {
+    "detailTitle": "【漏洞通报】人工智能重要安全漏洞通报-Ollama安全漏洞",
+    "detailSubtitle": "发布时间：2026-05-06 18:24:12",
+    "originalSubtitle": "发布时间：2026-05-06 18:24:12",
+    "contents": [
+      {
+        "type": "paragraph",
+        "text": " 近日，国家信息安全漏洞库（CNNVD）收到关于Ollama安全漏洞（CNNVD-202605-502、CVE-2026-7482）情况的报送。攻击者通过漏洞可获取环境变量、API密钥、系统提示和并发用户的对话数据。Ollama 0.17.1之前版本均受此漏洞影响。目前，Ollama官方已发布新版本修复了该漏洞，建议用户及时确认产品版本，尽快采取修补措施。"
+      },
+      {
+        "type": "heading",
+        "text": "一、漏洞介绍"
+      },
+      {
+        "type": "paragraph",
+        "text": "Ollama是一个开源的跨平台大模型工具。该漏洞源于GGUF模型加载器中堆越界读取，可能导致服务器读取超出分配的堆缓冲区内存，攻击者通过漏洞可获取环境变量、API密钥、系统提示和并发用户的对话数据。 二、危害影响 Ollama 0.17.1之前版本均受此漏洞影响。"
+      },
+      {
+        "type": "heading",
+        "text": "三、修复建议"
+      },
+      {
+        "type": "paragraph",
+        "text": "目前，Ollama官方已发布新版本修复了该漏洞，建议用户及时确认产品版本，尽快采取修补措施。官方补丁链接： https://github.com/ollama/ollama/releases/tag/v0.17.1 本通报由CNNVD技术支撑单位——奇安信网神信息技术（北京）股份有限公司、北方实验室（沈阳）股份有限公司、中国银联股份有限公司、内蒙古万德系统集成有限责任公司、内蒙古网安信息安全技术有限公司等技术支撑单位提供支持。 CNNVD将继续跟踪上述漏洞的相关情况，及时发布相关信息。如有需要，可与CNNVD联系。联系方式: cnnvd@itsec.gov.cn"
+      }
+    ],
+    "table": "",
+    "savedAt": "2026-09-06T03:41:38.304Z"
+  },
+  {
+    "detailTitle": "【漏洞通报】CNNVD关于Linux kernel安全漏洞的通报",
+    "detailSubtitle": "发布时间：2026-04-30 18:32:06",
+    "originalSubtitle": "发布时间：2026-04-30 18:32:06",
+    "contents": [
+      {
+        "type": "paragraph",
+        "text": " 近日，国家信息安全漏洞库（CNNVD）收到关于Linux kernel安全漏洞（CNNVD-202604-4496、CVE-2026-31431）情况的报送。成功利用漏洞的攻击者，可在目标系统获取root权限。Linux kernel多个版本均受此漏洞影响。目前，Linux官方已发布新版本修复了该漏洞，建议用户及时确认产品版本，尽快采取修补措施。"
+      },
+      {
+        "type": "heading",
+        "text": "一、漏洞介绍"
+      },
+      {
+        "type": "paragraph",
+        "text": "Linux kernel是美国Linux基金会的开源操作系统Linux所使用的内核。该漏洞源于内核加密子系统中的一处逻辑缺陷，攻击者可以利用AF_ALG加密接口与splice()系统调用的组合，向任意可读文件的页缓存写入受控的4字节数据，从而篡改setuid程序，获取系统root权限。目前该漏洞利用代码和技术细节已公开。 该漏洞于4月22日被国家信息安全漏洞库采集并收录。近期，该漏洞利用代码和技术细节被公开，影响范围迅速扩大，建议用户尽快采取修补措施。 二、危害影响 Ubuntu 24.04 LTS及以下版本、Amazon Linux 2023及以下版本、Red Hat Enterprise Linux 10及以下版本、Red Hat Enterprise Linux 9及以下版本、Red Hat Enterprise Linux 8及以下版本、SUSE 16及以下版本、Debian/Arch/Fedora/Rocky/Alma/Oracle等同期内核版本均受此漏洞影响。"
+      },
+      {
+        "type": "heading",
+        "text": "三、修复建议"
+      },
+      {
+        "type": "paragraph",
+        "text": "目前，Linux官方已发布新版本修复了该漏洞，建议用户及时确认产品版本，尽快采取修补措施。参考链接： https://www.kernel.org/ 本通报由CNNVD技术支撑单位——奇安信网神信息技术（北京）股份有限公司、深信服科技股份有限公司、天翼云科技有限公司、北京时代新威信息技术有限公司、成都安美勤信息技术股份有限公司、新华三技术有限公司、远江盛邦安全科技集团股份有限公司、北京天融信网络安全技术有限公司、北京长亭科技有限公司、中乾建技术有限公司、广州纬安科技有限公司、中国银联股份有限公司、上海戎磐网络科技有限公司、等技术支撑单位提供支持。 CNNVD将继续跟踪上述漏洞的相关情况，及时发布相关信息。如有需要，可与CNNVD联系。联系方式: cnnvd@itsec.gov.cn"
+      }
+    ],
+    "table": "",
+    "savedAt": "2026-09-06T03:41:38.304Z"
+  },
+  {
+    "detailTitle": "【漏洞通报】CNNVD关于cPanel访问控制错误漏洞 的通报",
+    "detailSubtitle": "发布时间：2026-04-30 18:32:01",
+    "originalSubtitle": "发布时间：2026-04-30 18:32:01",
+    "contents": [
+      {
+        "type": "paragraph",
+        "text": " 近日，国家信息安全漏洞库（CNNVD）收到关于cPanel访问控制错误漏洞（CNNVD-202604-5641、CVE-2026-41940）情况的报送。攻击者可通过构造恶意请求，在经未授权的情况下访问目标服务器控制面板。cPanel 11.40之后版本均受此漏洞影响。目前，cPanel官方已发布新版本修复了该漏洞，建议用户及时确认产品版本，尽快采取修补措施。"
+      },
+      {
+        "type": "heading",
+        "text": "一、漏洞介绍"
+      },
+      {
+        "type": "paragraph",
+        "text": "cPanel是美国cPanel公司的一套基于Web的自动化主机托管平台，该平台主要用于自动化管理网站和服务器。该漏洞源于登录流程中存在身份验证绕过问题，可能导致未经身份验证的攻击者远程访问目标服务器控制面板。 二、危害影响 cPanel 11.40之后版本受此漏洞影响。"
+      },
+      {
+        "type": "heading",
+        "text": "三、修复建议"
+      },
+      {
+        "type": "paragraph",
+        "text": "目前，cPanel官方已发布新版本修复了该漏洞，建议用户及时确认产品版本，尽快采取修补措施。参考链接： https://support.cpanel.net/hc/en-us/articles/40073787579671-Security-CVE-2026-41940-cPanel-WHM-WP2-Security-Update-04-28-2026 本通报由CNNVD技术支撑单位——奇安信网神信息技术（北京）股份有限公司、亚信科技（成都）有限公司、内蒙古万德系统集成有限责任公司、内蒙古旌云科技有限公司、天翼云科技有限公司等技术支撑单位提供支持。 CNNVD将继续跟踪上述漏洞的相关情况，及时发布相关信息。如有需要，可与CNNVD联系。联系方式: cnnvd@itsec.gov.cn"
+      }
+    ],
+    "table": "",
+    "savedAt": "2026-09-06T03:41:38.304Z"
+  },
+  {
+    "detailTitle": "【漏洞通报】CNNVD关于Microsoft Office安全漏洞的通报",
+    "detailSubtitle": "发布时间：2026-04-24 11:41:08",
+    "originalSubtitle": "发布时间：2026-04-24 11:41:08",
+    "contents": [
+      {
+        "type": "paragraph",
+        "text": " 近日，国家信息安全漏洞库（CNNVD）收到关于Microsoft Office安全漏洞（CNNVD-202601-4359、CVE-2026-21509）情况的报送。攻击者可通过构造恶意Office文档绕过用户保护机制，进而执行恶意代码。Microsoft Office多个版本均受此漏洞影响。目前，微软官方已发布补丁修复了该漏洞，建议用户及时确认产品版本，尽快采取修补措施。"
+      },
+      {
+        "type": "heading",
+        "text": "一、漏洞介绍"
+      },
+      {
+        "type": "paragraph",
+        "text": "Microsoft Office是美国微软（Microsoft）公司的一款办公软件套件产品。Microsoft Office存在安全漏洞，该漏洞源于未对不受信任的输入进行有效验证，攻击者可通过构造恶意Office文档绕过用户保护机制，进而执行恶意代码。"
+      },
+      {
+        "type": "heading",
+        "text": "二、危害影响"
+      },
+      {
+        "type": "paragraph",
+        "text": "Microsoft Office 2016、Microsoft Office 2019、Microsoft Office LTSC 2021、Microsoft Office LTSC 2024、Microsoft 365 Apps for Enterprise版本均受此漏洞影响。"
+      },
+      {
+        "type": "heading",
+        "text": "三、修复建议"
+      },
+      {
+        "type": "paragraph",
+        "text": "目前，微软官方已发布补丁修复了该漏洞，建议用户及时确认产品版本，尽快采取修补措施。官方补丁链接： https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-21509 本通报由CNNVD技术支撑单位——奇安信网神信息技术（北京）股份有限公司、信飛科技有限公司、南京禾盾信息科技有限公司、温州市数据集团有限公司、京东科技信息技术有限公司、中国银联股份有限公司等技术支撑单位提供支持。 CNNVD将继续跟踪上述漏洞的相关情况，及时发布相关信息。如有需要，可与CNNVD联系。联系方式: cnnvd@itsec.gov.cn"
+      }
+    ],
+    "table": "",
+    "savedAt": "2026-09-06T03:41:38.304Z"
   }
 ]
